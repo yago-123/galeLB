@@ -3,8 +3,15 @@
 OUTPUT_DIR := bin
 CONSENSUS_PROTOBUF_DIR := pkg/consensus
 
-# Define build flags
+# Define eBPF compiler and CFlags
+BPF_CLANG = clang
+BPF_CFLAGS = -target bpf -I/usr/include/linux -I/usr/include
+
+# Define build flags for Go
 GCFLAGS := -gcflags "all=-N -l"
+
+# Define output path for the XDP router program
+XDP_OBJECT_OUTPUT := pkg/routing/xdp_obj/xdp_router.o
 
 # Define executable names
 LB_BINARY_NAME := gale-lb
@@ -17,11 +24,18 @@ NODE_SOURCE := $(wildcard cmd/node/*.go)
 # Define path files for protoc compiler
 CONSENSUS_PROTOBUF_SOURCE := $(wildcard $(CONSENSUS_PROTOBUF_DIR)/*.proto)
 
+.PHONY: build 
+build: lb node
+
 .PHONY: lb
-lb: protobuf
+lb: protobuf xdp_router
 	@echo "building lb binary"
 	@go build $(GCFLAGS) -o $(OUTPUT_DIR)/$(LB_BINARY_NAME) $(LB_SOURCE)
 	@echo "lb binary ready at: $(OUTPUT_DIR)/$(LB_BINARY_NAME)"
+
+.PHONY: xdp_router
+xdp_router:
+	$(BPF_CLANG) -O2 -emit-llvm -c -g pkg/routing/router.c -o - | llc -march=bpf -filetype=obj -o $(XDP_OBJECT_OUTPUT)
 
 .PHONY: node
 node: protobuf
@@ -32,7 +46,7 @@ node: protobuf
 .PHONY: protobuf
 protobuf:
 	@echo "generating protobuf code"
-	@protoc --go_out=. --go_opt=paths=source_relative $(CONSENSUS_PROTOBUF_SOURCE)
+	@protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative $(CONSENSUS_PROTOBUF_SOURCE)
 
 .PHONY: lint
 lint:

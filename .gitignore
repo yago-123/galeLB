@@ -1,3 +1,4 @@
 *.pb.go
 .idea
 bin/*
+pkg/routing/xdp_obj/*
