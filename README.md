@@ -5,6 +5,12 @@
 ## Architecture
 
 ## Dependencies 
+Install dependencies for building eBPF programs: 
+```bash
+$ sudo apt-get install clang llvm libbpf-dev gcc make
+$ sudo apt install linux-headers-$(uname -r)
+```
+
 Install linter: 
 ```bash
 $ go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.5
