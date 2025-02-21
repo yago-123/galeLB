@@ -2,13 +2,16 @@ syntax = "proto3";
 
 option go_package = "github.com/yago-123/galedb/pkg/consensus";
 
-service NodeManager {
+service LBNodeManager {
   rpc RegisterNode(NodeInfo) returns (RegisterResponse);
+  // rpc HealthCheck(stream HealthCheckRequest) returns (stream HealthCheckResponse);
+  // rpc UnregisterNode(NodeInfo) returns (UnregisterResponse);
 }
 
 message NodeInfo {
-  string ip = 1;
-  int32 port = 2;
+  string node_id = 1;
+  string ip = 2;
+  int32 port = 3;
 }
 
 message RegisterResponse {
@@ -16,3 +19,22 @@ message RegisterResponse {
   string message = 2;
 }
 
+/*
+message UnregisterResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message HealthCheckRequest {
+  string node_id = 1;
+  int32 status = 2;
+  optional string status_message = 3;
+}
+
+message HealthCheckResponse {
+  bool acknowledged = 1;
+  optional string action = 2; // e.g., "restart", "drain", etc.
+}
+
+
+ */
