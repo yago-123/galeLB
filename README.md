@@ -1,1 +1,1 @@
-# GaleLB: fault-tolerant L4 load balancer
+# GaleLB: multi-node L4 load balancer

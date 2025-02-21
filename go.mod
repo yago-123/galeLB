@@ -1,1 +1,1 @@
-module gale
+module github.com/yago-123/gale
