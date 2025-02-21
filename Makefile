@@ -6,7 +6,7 @@ OUTPUT_DIR := bin
 GCFLAGS := -gcflags "all=-N -l"
 
 # Define executable names
-LB_BINARY_NAME := galelb
+LB_BINARY_NAME := gale-lb
 NODE_BINARY_NAME := gale-node
 
 # Define the source files for executables
@@ -24,3 +24,16 @@ node:
 	@echo "building node binary"
 	@go build $(GCFLAGS) -o $(OUTPUT_DIR)/$(NODE_BINARY_NAME) $(NODE_SOURCE)
 	@echo "node binary ready at: $(OUTPUT_DIR)/$(NODE_BINARY_NAME)"
+
+.PHONY: lint
+lint:
+	@echo "Running linter..."
+	@golangci-lint run ./...
+
+.PHONY: imports
+imports:
+	@find . -name "*.go" | xargs goimports -w
+
+.PHONY: clean
+clean:
+	@rm -rf $(OUTPUT_DIR)/*
