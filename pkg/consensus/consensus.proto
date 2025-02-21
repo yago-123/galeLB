@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+option go_package = "github.com/yago-123/galedb/pkg/consensus";
+
+service NodeManager {
+  rpc RegisterNode(NodeInfo) returns (RegisterResponse);
+}
+
+message NodeInfo {
+  string ip = 1;
+  int32 port = 2;
+}
+
+message RegisterResponse {
+  bool success = 1;
+  string message = 2;
+}
+
