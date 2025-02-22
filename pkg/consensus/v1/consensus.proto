@@ -4,8 +4,10 @@ option go_package = "github.com/yago-123/galedb/pkg/consensus";
 
 service LBNodeManager {
   rpc RegisterNode(NodeInfo) returns (RegisterResponse);
-  // rpc HealthCheck(stream HealthCheckRequest) returns (stream HealthCheckResponse);
   // rpc UnregisterNode(NodeInfo) returns (UnregisterResponse);
+
+  rpc ReportHealthStatus(stream HealthStatus) returns (stream HealthStatus);
+  // rpc HealthCheck(stream HealthCheckRequest) returns (stream HealthCheckResponse);
 }
 
 message NodeInfo {
@@ -17,6 +19,14 @@ message NodeInfo {
 message RegisterResponse {
   bool success = 1;
   string message = 2;
+}
+
+// Health status message, can be used to report health updates or queries
+message HealthStatus {
+  string node_id = 1;
+  string service = 2; // The service origin (e.g., "client", "server")
+  string status = 3;  // The health status (e.g., "SERVING", "NOT_SERVING")
+  string message = 4; // Optional message providing more context (e.g., error details)
 }
 
 /*

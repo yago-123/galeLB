@@ -4,6 +4,17 @@
 
 ## Architecture
 
+## Configuration
+Node configuration:
+```toml
+
+```
+
+Load balancer configuration: 
+```toml
+
+```
+
 ## Dependencies 
 Install dependencies for building eBPF programs: 
 ```bash

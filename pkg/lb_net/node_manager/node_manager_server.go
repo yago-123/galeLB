@@ -2,12 +2,12 @@ package node_manager
 
 import (
 	"fmt"
+	lbConfig "github.com/yago-123/galelb/config/lb"
 	"log"
 	"math"
 	"net"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	pb "github.com/yago-123/galelb/pkg/consensus/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
@@ -28,9 +28,11 @@ const (
 type Server struct {
 	grpcServer *grpc.Server
 	port       int
+
+	cfg *lbConfig.Config
 }
 
-func New(logger *logrus.Logger, port int) *Server {
+func New(cfg *lbConfig.Config, port int) *Server {
 	grpcServer := grpc.NewServer(
 		grpc.MaxRecvMsgSize(MaxRecvMsgSize),
 		grpc.MaxSendMsgSize(MaxSendMsgSize),
@@ -46,7 +48,7 @@ func New(logger *logrus.Logger, port int) *Server {
 		// grpc.StreamInterceptor(),                // todo
 	)
 
-	pb.RegisterLBNodeManagerServer(grpcServer, newNodeManager(logger))
+	pb.RegisterLBNodeManagerServer(grpcServer, newNodeManager(cfg))
 
 	// todo() remove once the project has been stabilized
 	reflection.Register(grpcServer)
