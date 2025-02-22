@@ -3,10 +3,11 @@ package node_manager
 import (
 	"context"
 	"fmt"
-	lbConfig "github.com/yago-123/galelb/config/lb"
-	"google.golang.org/grpc"
 	"sync"
 	"time"
+
+	lbConfig "github.com/yago-123/galelb/config/lb"
+	"google.golang.org/grpc"
 
 	v1Consensus "github.com/yago-123/galelb/pkg/consensus/v1"
 

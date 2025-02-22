@@ -23,6 +23,6 @@ func main() {
 	defer cancel()
 
 	if err := client.RegisterNode(ctx); err != nil {
-		logger.Errorf("Failed to register node: %v", err)
+		logger.Errorf("failed to register node: %v", err)
 	}
 }

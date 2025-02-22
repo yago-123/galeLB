@@ -2,11 +2,12 @@ package node_manager
 
 import (
 	"fmt"
-	lbConfig "github.com/yago-123/galelb/config/lb"
 	"log"
 	"math"
 	"net"
 	"time"
+
+	lbConfig "github.com/yago-123/galelb/config/lb"
 
 	pb "github.com/yago-123/galelb/pkg/consensus/v1"
 	"google.golang.org/grpc"

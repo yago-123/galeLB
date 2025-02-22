@@ -3,8 +3,9 @@ package routing
 import (
 	_ "embed"
 	"fmt"
-	"github.com/cilium/ebpf/rlimit"
 	"net"
+
+	"github.com/cilium/ebpf/rlimit"
 
 	"github.com/sirupsen/logrus"
 
@@ -19,12 +20,14 @@ const (
 
 type router struct {
 	netInterface string
+	port         int
 	logger       *logrus.Logger
 }
 
-func New(logger *logrus.Logger, netInterface string) *router {
+func New(logger *logrus.Logger, netInterface string, incomingReqPort int) *router {
 	return &router{
 		netInterface: netInterface,
+		port:         incomingReqPort,
 		logger:       logger,
 	}
 }

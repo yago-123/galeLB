@@ -5,16 +5,16 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/sirupsen/logrus"
-	pb "github.com/yago-123/galelb/pkg/consensus"
+	v1Consensus "github.com/yago-123/galelb/pkg/consensus/v1"
 
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
 type Client struct {
 	conn   *grpc.ClientConn
-	client pb.LBNodeManagerClient
+	client v1Consensus.LBNodeManagerClient
 
 	logger *logrus.Logger
 }
@@ -28,7 +28,7 @@ func New(logger *logrus.Logger, ip string, port int) *Client {
 		log.Fatalf("could not connect to load balancer: %v", err)
 	}
 
-	client := pb.NewLBNodeManagerClient(conn)
+	client := v1Consensus.NewLBNodeManagerClient(conn)
 
 	return &Client{
 		conn:   conn,
@@ -38,7 +38,7 @@ func New(logger *logrus.Logger, ip string, port int) *Client {
 }
 
 func (s *Client) RegisterNode(ctx context.Context) error {
-	resp, err := s.client.RegisterNode(ctx, &pb.NodeInfo{
+	resp, err := s.client.RegisterNode(ctx, &v1Consensus.NodeInfo{
 		NodeId: "192.168.1.1",
 		Ip:     "192.168.1.1",
 		Port:   1234,
