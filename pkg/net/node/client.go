@@ -1,4 +1,4 @@
-package node_net
+package node
 
 import (
 	"context"
@@ -45,13 +45,13 @@ func (s *Client) RegisterNode(ctx context.Context) error {
 	})
 
 	if err != nil {
-		return fmt.Errorf("error registering node: %v", err)
+		return fmt.Errorf("error registering node: %w", err)
 	}
 
-	if resp.Success == false {
-		return fmt.Errorf("error registering node: %v", resp.Message)
+	if !resp.GetSuccess() {
+		return fmt.Errorf("error registering node: %v", resp.GetMessage())
 	}
 
-	s.logger.Debugf("registered node with success", resp.Success, resp.Message)
+	s.logger.Debugf("registered node with success", resp.GetSuccess(), resp.GetMessage())
 	return nil
 }

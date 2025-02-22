@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/yago-123/galelb/pkg/lb_net/node_manager"
+	"github.com/yago-123/galelb/pkg/net/lb/nodemanager"
 
 	"github.com/sirupsen/logrus"
 	lbConfig "github.com/yago-123/galelb/config/lb"
@@ -30,12 +30,12 @@ func main() {
 
 	// Load dummy eBPF program
 	router := routing.New(cfg.Logger, "eno1", 8080)
-	if err := router.LoadRouter(); err != nil {
-		log.Fatalf("failed to load router, ensure you have the required permissions: %s", err)
+	if errLoad := router.LoadRouter(); errLoad != nil {
+		log.Fatalf("failed to load router, ensure you have the required permissions: %s", errLoad)
 	}
 
 	// Create gRPC server for managing nodes
-	server := node_manager.New(cfg, 50051)
+	server := nodemanager.New(cfg, 50051)
 	server.Start()
 
 	// Add some nodes
@@ -45,6 +45,6 @@ func main() {
 
 	// Hash the IP of a request
 	for i := 0; i < 15; i++ {
-		fmt.Printf("Request from IP will be routed to %s\n", ch.GetNode([]byte(fmt.Sprintf("113.168.1.1%d", i))))
+		cfg.Logger.Infof("request from IP will be routed to %s\n", ch.GetNode([]byte(fmt.Sprintf("113.168.1.1%d", i))))
 	}
 }

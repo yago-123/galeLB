@@ -1,9 +1,8 @@
-package node_manager
+package nodemanager
 
 import (
 	"context"
 	"fmt"
-	"io"
 	"sync"
 	"time"
 
@@ -48,7 +47,7 @@ func newNodeManager(cfg *lbConfig.Config) *nodeManager {
 }
 
 // RegisterNode ensures that the new node spawned is accepted into the load balancer registry
-func (s *nodeManager) RegisterNode(ctx context.Context, req *v1Consensus.NodeInfo) (*v1Consensus.RegisterResponse, error) {
+func (s *nodeManager) RegisterNode(_ context.Context, req *v1Consensus.NodeInfo) (*v1Consensus.RegisterResponse, error) {
 	s.logger.Debugf("Registering node: %s at %s:%d", req.GetNodeId(), req.GetIp(), req.GetPort())
 
 	// todo: append nodeRegistry
@@ -77,7 +76,7 @@ func (s *nodeManager) ReportHealthStatus(stream grpc.BidiStreamingServer[v1Conse
 	go func() {
 		for {
 			req, err := stream.Recv()
-			if err == io.EOF || status.Code(err) == codes.Canceled {
+			if gRPCErrUnrecoverable(err) {
 				// todo(): add some sort of metadata id to identify the streams?
 				s.logger.Infof("stream closed by node")
 				errChan <- err
@@ -104,13 +103,32 @@ func (s *nodeManager) ReportHealthStatus(stream grpc.BidiStreamingServer[v1Conse
 			timer.Reset(s.cfg.NodeHealthChecksTimeout)
 		case err := <-errChan:
 			s.logger.Errorf("error receiving health status: %v", err)
+			if gRPCErrUnrecoverable(err) {
+				s.unregisterNode()
+				return fmt.Errorf("unrecoverable error receiving health status: %w", err)
+			}
 
 			// Do not drain the timer, as we want to stop tracking this node if it does not send health status
 			// todo(): may be worth to send (timeout/2) - 1?
 		case <-timer.C:
+			s.unregisterNode()
+			// todo(): update the node info
 			return fmt.Errorf("timed out waiting for health status")
 		}
 	}
+}
 
-	return nil
+// unregisterNode removes a node from the registry
+func (s *nodeManager) unregisterNode() {
+
+	// todo(): it should also trigger a leader election somehow to re-allocate the traffic
+}
+
+// registerNode adds a node to the registry
+func (s *nodeManager) registerNode() {
+
+}
+
+func gRPCErrUnrecoverable(err error) bool {
+	return status.Code(err) == codes.Canceled || status.Code(err) == codes.Unavailable
 }

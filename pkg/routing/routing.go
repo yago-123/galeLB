@@ -1,7 +1,6 @@
 package routing
 
 import (
-	_ "embed"
 	"fmt"
 	"net"
 
@@ -18,30 +17,30 @@ const (
 	RouterXDPProgName = "xdp_router"
 )
 
-type router struct {
+type Router struct {
 	netInterface string
 	port         int
 	logger       *logrus.Logger
 }
 
-func New(logger *logrus.Logger, netInterface string, incomingReqPort int) *router {
-	return &router{
+func New(logger *logrus.Logger, netInterface string, incomingReqPort int) *Router {
+	return &Router{
 		netInterface: netInterface,
 		port:         incomingReqPort,
 		logger:       logger,
 	}
 }
 
-func (r *router) LoadRouter() error {
+func (r *Router) LoadRouter() error {
 	if err := rlimit.RemoveMemlock(); err != nil {
-		return fmt.Errorf("error removing memlock: %v", err)
+		return fmt.Errorf("error removing memlock: %w", err)
 	}
 
 	// Load the XDP object file (ELF)
 	// todo(): this should be loaded with embed instead
 	collection, err := ebpf.LoadCollection(RouterXDPProgPath)
 	if err != nil {
-		return fmt.Errorf("failed to load XDP collection: %v", err)
+		return fmt.Errorf("failed to load XDP collection: %w", err)
 	}
 	defer collection.Close()
 
@@ -54,7 +53,7 @@ func (r *router) LoadRouter() error {
 	// Fetch index from string interface
 	idxInterface, err := getInterfaceIndex(r.netInterface)
 	if err != nil {
-		return fmt.Errorf("failed to get interface index: %v", err)
+		return fmt.Errorf("failed to get interface index: %w", err)
 	}
 
 	// Attach XDP program to a network interface
@@ -63,7 +62,7 @@ func (r *router) LoadRouter() error {
 		Interface: idxInterface,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to attach XDP program: %v", err)
+		return fmt.Errorf("failed to attach XDP program: %w", err)
 	}
 	defer link.Close()
 
@@ -72,11 +71,11 @@ func (r *router) LoadRouter() error {
 	return nil
 }
 
-func (r *router) UnloadRouter() error {
+func (r *Router) UnloadRouter() error {
 	return nil
 }
 
-func (r *router) UpdateRing() {
+func (r *Router) UpdateRing() {
 
 }
 

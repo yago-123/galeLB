@@ -4,8 +4,9 @@ import (
 	"context"
 	"time"
 
+	"github.com/yago-123/galelb/pkg/net/node"
+
 	"github.com/sirupsen/logrus"
-	"github.com/yago-123/galelb/pkg/node_net"
 )
 
 const (
@@ -17,7 +18,7 @@ var logger = logrus.New()
 func main() {
 	logger.SetLevel(logrus.DebugLevel)
 
-	client := node_net.New(logger, "192.168.18.130", 50051)
+	client := node.New(logger, "192.168.18.130", 50051)
 
 	ctx, cancel := context.WithTimeout(context.Background(), ContextTimeout)
 	defer cancel()

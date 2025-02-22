@@ -1,4 +1,4 @@
-package node_manager
+package nodemanager
 
 import (
 	"fmt"
@@ -57,6 +57,7 @@ func New(cfg *lbConfig.Config, port int) *Server {
 	return &Server{
 		grpcServer: grpcServer,
 		port:       port,
+		cfg:        cfg,
 	}
 }
 
