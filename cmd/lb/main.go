@@ -12,14 +12,13 @@ import (
 	"github.com/yago-123/galelb/pkg/routing"
 )
 
-var logger = logrus.New()
 var cfg *lbConfig.Config
 
 func main() {
-	logger.SetLevel(logrus.DebugLevel)
-
 	// Execute the root command
 	Execute(logrus.New())
+
+	cfg.Logger.SetLevel(logrus.DebugLevel)
 
 	cfg.Logger.Infof("starting load balancer with config: %v", cfg)
 

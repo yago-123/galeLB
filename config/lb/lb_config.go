@@ -22,7 +22,7 @@ const (
 	DefaultNodeHealthChecksBeforeRouting = 3
 	DefaultNodeHealthChecksTimeout       = 10 * time.Second
 
-	DefaultConfigFile = "lb_config.toml"
+	DefaultConfigFile = "lb.toml"
 )
 
 type Config struct {
@@ -36,10 +36,11 @@ type Config struct {
 	Logger *logrus.Logger
 }
 
-func NewDefaultConfig() *Config {
+func NewConfig() *Config {
 	return &Config{
 		NodeHealthChecksBeforeRouting: DefaultNodeHealthChecksBeforeRouting,
 		NodeHealthChecksTimeout:       DefaultNodeHealthChecksTimeout,
+		Logger:                        logrus.New(),
 	}
 }
 
@@ -71,13 +72,12 @@ func LoadConfig(path string) (*Config, error) {
 func InitConfig(cmd *cobra.Command) *Config {
 	cfg, err := LoadConfig(GetConfigFilePath(cmd))
 	if err != nil {
-		cfg = NewDefaultConfig()
+		cfg = NewConfig()
 
 		cfg.Logger.Warnf("failed to load default config: %v", err)
 		cfg.Logger.Infof("relying on default configuration")
 	}
 
-	AddConfigFlags(cmd)
 	ApplyFlagsToConfig(cmd, cfg)
 
 	return cfg
@@ -87,7 +87,7 @@ func InitConfig(cmd *cobra.Command) *Config {
 func AddConfigFlags(cmd *cobra.Command) {
 	cmd.Flags().Uint(KeyNodeHealthChecksBeforeRouting, DefaultNodeHealthChecksBeforeRouting, "Continuous node health checks that must be received before starting routing traffic to the node")
 	cmd.Flags().Duration(KeyNodeHealthChecksTimeout, DefaultNodeHealthChecksTimeout, "Maximum time between health checks before node is considered unresponsive and traffic is re-routed")
-	cmd.Flags().String(KeyConfigFile, DefaultConfigFile, "config file (default is $PWD/lb_config.toml)")
+	cmd.Flags().String(KeyConfigFile, DefaultConfigFile, "config file (default is $PWD/config/lb.toml)")
 
 	_ = viper.BindPFlag(KeyNodeHealthChecksBeforeRouting, cmd.Flags().Lookup(KeyNodeHealthChecksBeforeRouting))
 	_ = viper.BindPFlag(KeyNodeHealthChecksTimeout, cmd.Flags().Lookup(KeyNodeHealthChecksTimeout))

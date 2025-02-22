@@ -1,0 +1,2 @@
+node_health_checks_before_routing = 3
+node_health_checks_timeout = "5s"
