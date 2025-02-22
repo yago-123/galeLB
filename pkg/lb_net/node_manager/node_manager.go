@@ -3,8 +3,12 @@ package node_manager
 import (
 	"context"
 	"fmt"
+	"io"
 	"sync"
 	"time"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	lbConfig "github.com/yago-123/galelb/config/lb"
 	"google.golang.org/grpc"
@@ -12,6 +16,10 @@ import (
 	v1Consensus "github.com/yago-123/galelb/pkg/consensus/v1"
 
 	"github.com/sirupsen/logrus"
+)
+
+const (
+	ChannelBufferSize = 1
 )
 
 type node struct {
@@ -22,16 +30,18 @@ type node struct {
 // console, allowing nodeRegistry to connect to the server as soon as they start in order to be registered and allocated
 // traffic
 type nodeManager struct {
-	v1Consensus.UnimplementedLBNodeManagerServer
-
+	cfg              *lbConfig.Config
 	nodeRegistry     map[string]node
 	nodeRegistryLock sync.RWMutex
+
+	v1Consensus.UnimplementedLBNodeManagerServer
 
 	logger *logrus.Logger
 }
 
 func newNodeManager(cfg *lbConfig.Config) *nodeManager {
 	return &nodeManager{
+		cfg:          cfg,
 		nodeRegistry: map[string]node{},
 		logger:       cfg.Logger,
 	}
@@ -54,32 +64,51 @@ func (s *nodeManager) RegisterNode(ctx context.Context, req *v1Consensus.NodeInf
 }
 
 func (s *nodeManager) ReportHealthStatus(stream grpc.BidiStreamingServer[v1Consensus.HealthStatus, v1Consensus.HealthStatus]) error {
-	msgChan := make(chan *v1Consensus.HealthStatus)
-	errChan := make(chan error)
+	msgChan := make(chan *v1Consensus.HealthStatus, ChannelBufferSize)
+	errChan := make(chan error, ChannelBufferSize)
 
-	// set
-	timer := time.NewTimer(10 * time.Second)
+	defer close(msgChan)
+	defer close(errChan)
+
+	// Set timeout for health checks. Nodes should send health checks at least once every half of this duration
+	timer := time.NewTimer(s.cfg.NodeHealthChecksTimeout)
 	defer timer.Stop()
 
-	for {
-		go func() {
-			for {
-				req, err := stream.Recv()
-				if err != nil {
-					errChan <- err
-				}
-
-				msgChan <- req
-			}
-		}()
-
+	go func() {
 		for {
-			select {
-			//case msg := <-msgChan:
-			// case err := <-errChan:
-			case <-timer.C:
-				return fmt.Errorf("timed out waiting for health status")
+			req, err := stream.Recv()
+			if err == io.EOF || status.Code(err) == codes.Canceled {
+				// todo(): add some sort of metadata id to identify the streams?
+				s.logger.Infof("stream closed by node")
+				errChan <- err
+				return
 			}
+
+			if err != nil {
+				errChan <- err
+			}
+
+			msgChan <- req
+		}
+	}()
+
+	for {
+		select {
+		case msg := <-msgChan:
+			s.logger.Infof("received health status from node %s: %v", msg.GetNodeId(), msg.GetStatus())
+
+			// Drain and reset the timer
+			if !timer.Stop() {
+				<-timer.C
+			}
+			timer.Reset(s.cfg.NodeHealthChecksTimeout)
+		case err := <-errChan:
+			s.logger.Errorf("error receiving health status: %v", err)
+
+			// Do not drain the timer, as we want to stop tracking this node if it does not send health status
+			// todo(): may be worth to send (timeout/2) - 1?
+		case <-timer.C:
+			return fmt.Errorf("timed out waiting for health status")
 		}
 	}
 
