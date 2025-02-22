@@ -1,7 +1,7 @@
 
 # Define directories
 OUTPUT_DIR := bin
-CONSENSUS_PROTOBUF_DIR := pkg/consensus
+CONSENSUS_PROTOBUF_DIR := pkg/consensus/v1
 
 # Define eBPF compiler and CFlags
 BPF_CLANG = clang
@@ -56,6 +56,10 @@ lint:
 .PHONY: imports
 imports:
 	@find . -name "*.go" | xargs goimports -w
+
+.PHONY: fmt
+fmt:
+	@go fmt ./...
 
 .PHONY: clean
 clean:
