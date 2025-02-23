@@ -1,5 +1,9 @@
 # GaleLB: multi-node L4 load balancer
 
+Supports: 
+- [ ] L3-Based Forwarding (Stateless IP Routing in `XDP`)
+- [ ] L4-Based Forwarding (Stateful `NAT` with Connection Tracking in `XDP + TC`)]
+
 ## Requirements 
 
 ## Architecture

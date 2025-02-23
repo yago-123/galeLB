@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/yago-123/galelb/pkg/net/lb/nodemanager"
+	"github.com/yago-123/galelb/pkg/lbnetwork/nodemanager"
 
 	"github.com/sirupsen/logrus"
 	lbConfig "github.com/yago-123/galelb/config/lb"

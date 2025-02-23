@@ -1,4 +1,4 @@
-package node
+package nodenetwork
 
 import (
 	"context"

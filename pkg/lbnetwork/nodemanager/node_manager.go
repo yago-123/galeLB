@@ -3,8 +3,11 @@ package nodemanager
 import (
 	"context"
 	"fmt"
+	"net"
 	"sync"
 	"time"
+
+	"google.golang.org/grpc/peer"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -69,22 +72,29 @@ func (s *nodeManager) ReportHealthStatus(stream grpc.BidiStreamingServer[v1Conse
 	defer close(msgChan)
 	defer close(errChan)
 
+	tcpAddr, err := extractPeerInfoFromConn(stream)
+	if err != nil {
+		return fmt.Errorf("failed to extract peer info from stream: %w", err)
+	}
+
+	s.logger.Debugf("registered new health check probe from %s", tcpAddr.String())
+
 	// Set timeout for health checks. Nodes should send health checks at least once every half of this duration
 	timer := time.NewTimer(s.cfg.NodeHealthChecksTimeout)
 	defer timer.Stop()
 
 	go func() {
 		for {
-			req, err := stream.Recv()
-			if gRPCErrUnrecoverable(err) {
+			req, errRecv := stream.Recv()
+			if gRPCErrUnrecoverable(errRecv) {
 				// todo(): add some sort of metadata id to identify the streams?
 				s.logger.Infof("stream closed by node")
-				errChan <- err
+				errChan <- errRecv
 				return
 			}
 
 			if err != nil {
-				errChan <- err
+				errChan <- errRecv
 			}
 
 			msgChan <- req
@@ -94,7 +104,9 @@ func (s *nodeManager) ReportHealthStatus(stream grpc.BidiStreamingServer[v1Conse
 	for {
 		select {
 		case msg := <-msgChan:
-			s.logger.Infof("received health status from node %s: %v", msg.GetNodeId(), msg.GetStatus())
+			s.logger.Infof("received health check from node %s: %v", msg.GetNodeId(), msg.GetStatus())
+
+			// todo(): make use of tcpAddr key to update the node info
 
 			// Drain and reset the timer
 			if !timer.Stop() {
@@ -131,4 +143,15 @@ func (s *nodeManager) registerNode() {
 
 func gRPCErrUnrecoverable(err error) bool {
 	return status.Code(err) == codes.Canceled || status.Code(err) == codes.Unavailable
+}
+
+func extractPeerInfoFromConn(stream grpc.BidiStreamingServer[v1Consensus.HealthStatus, v1Consensus.HealthStatus]) (net.TCPAddr, error) {
+	p, ok := peer.FromContext(stream.Context())
+	if ok {
+		if addr, okTcp := p.Addr.(*net.TCPAddr); okTcp {
+			return *addr, nil
+		}
+	}
+
+	return net.TCPAddr{}, fmt.Errorf("failed to extract peer info from stream")
 }
