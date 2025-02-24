@@ -11,13 +11,19 @@ Supports:
 ## Configuration
 Load balancer configuration:
 ```toml
-node_health_checks_before_routing = 3
-node_health_checks_timeout = "5s"
+[node_health]
+checks_before_routing = 3
+checks_timeout = "5s"
 ```
 
 Node configuration:
 ```toml
-
+[load_balancer]
+addresses = [
+    { ip = "192.168.1.1", port = 7070 },
+    { ip = "192.168.1.2", port = 8080 },
+    { ip = "192.168.1.3", port = 9090 }
+]
 ```
 
 ## Example
