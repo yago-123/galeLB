@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	nodeConfig "github.com/yago-123/galelb/config/node"
 	"time"
 
 	"github.com/yago-123/galelb/pkg/nodenetwork"
@@ -13,17 +14,23 @@ const (
 	ContextTimeout = time.Second * 5
 )
 
-var logger = logrus.New()
+var cfg *nodeConfig.Config
 
 func main() {
-	logger.SetLevel(logrus.DebugLevel)
+	Execute(logrus.New())
 
-	client := nodenetwork.New(logger, "192.168.18.130", 50051)
+	cfg.Logger.SetLevel(logrus.DebugLevel)
 
-	ctx, cancel := context.WithTimeout(context.Background(), ContextTimeout)
-	defer cancel()
+	cfg.Logger.Infof("starting load balancer with config: %v", cfg)
 
-	if err := client.RegisterNode(ctx); err != nil {
-		logger.Errorf("failed to register node: %v", err)
+	for _, address := range cfg.LoadBalancer.Addresses {
+		client := nodenetwork.New(cfg.Logger, address.IP, address.Port)
+
+		ctx, cancel := context.WithTimeout(context.Background(), ContextTimeout)
+		defer cancel()
+
+		if err := client.RegisterNode(ctx); err != nil {
+			cfg.Logger.Errorf("failed to register node: %v", err)
+		}
 	}
 }

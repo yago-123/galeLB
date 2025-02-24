@@ -80,7 +80,7 @@ func (s *nodeManager) ReportHealthStatus(stream grpc.BidiStreamingServer[v1Conse
 	s.logger.Debugf("registered new health check probe from %s", tcpAddr.String())
 
 	// Set timeout for health checks. Nodes should send health checks at least once every half of this duration
-	timer := time.NewTimer(s.cfg.NodeHealthChecksTimeout)
+	timer := time.NewTimer(s.cfg.NodeHealth.ChecksTimeout)
 	defer timer.Stop()
 
 	go func() {
@@ -112,7 +112,7 @@ func (s *nodeManager) ReportHealthStatus(stream grpc.BidiStreamingServer[v1Conse
 			if !timer.Stop() {
 				<-timer.C
 			}
-			timer.Reset(s.cfg.NodeHealthChecksTimeout)
+			timer.Reset(s.cfg.NodeHealth.ChecksTimeout)
 		case err := <-errChan:
 			s.logger.Errorf("error receiving health status: %v", err)
 			if gRPCErrUnrecoverable(err) {
