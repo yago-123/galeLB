@@ -12,8 +12,19 @@ Supports:
 Load balancer configuration:
 ```toml
 [node_health]
+
+# number of continuous health checks that must be passed before being eligible for routing destination
 checks_before_routing = 3
+# duration of deadline between health checks, after this period, nodes will be removed from the routing ring
 checks_timeout = "5s"
+
+# number of times nodes can fail to send health checks before they are blacklisted
+# ex: the node will be added and removed 5 times to the routing table before they will start to be completly ignored.
+# use -1 if want to disable this option
+black_list_after_fails = 5
+
+# duration of the ban 
+black_list_expiry = "5m"
 ```
 
 Node configuration:
