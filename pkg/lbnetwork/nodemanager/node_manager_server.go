@@ -16,8 +16,8 @@ import (
 )
 
 const (
-	MaxRecvMsgSize = 1024 * 1024 * 4 // 4MB
-	MaxSendMsgSize = 1024 * 1024 * 4 // 4MB
+	MaxRecvMsgSize = 4 * 1024 * 1024 // 4MB
+	MaxSendMsgSize = 4 * 1024 * 1024 // 4MB
 
 	gRPCInfinity            = time.Duration(math.MaxInt64)
 	KeepAliveProbeFrequency = time.Second * 3
