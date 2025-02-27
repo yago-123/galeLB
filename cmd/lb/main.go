@@ -29,13 +29,13 @@ func main() {
 	}
 
 	// Load dummy eBPF program
-	router := routing.New(cfg.Logger, "eno1", 8080)
+	router := routing.New(cfg.Logger, cfg.Local.NetIfaceClients, cfg.Local.ClientsPort)
 	if errLoad := router.LoadRouter(); errLoad != nil {
 		log.Fatalf("failed to load router, ensure you have the required permissions: %s", errLoad)
 	}
 
 	// Create gRPC server for managing nodes
-	server := nodemanager.New(cfg, 50051)
+	server := nodemanager.New(cfg)
 	server.Start()
 
 	// Add some nodes
