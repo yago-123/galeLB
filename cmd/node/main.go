@@ -2,9 +2,10 @@ package main
 
 import (
 	"context"
-	nodeConfig "github.com/yago-123/galelb/config/node"
+	v1Consensus "github.com/yago-123/galelb/pkg/consensus/v1"
 	"time"
 
+	nodeConfig "github.com/yago-123/galelb/config/node"
 	"github.com/yago-123/galelb/pkg/nodenetwork"
 
 	"github.com/sirupsen/logrus"
@@ -24,13 +25,35 @@ func main() {
 	cfg.Logger.Infof("starting load balancer with config: %v", cfg)
 
 	for _, address := range cfg.LoadBalancer.Addresses {
-		client := nodenetwork.New(cfg.Logger, address.IP, address.Port)
+		client, err := nodenetwork.NewClient(cfg.Logger, address.IP, address.Port)
+		if err != nil {
+			cfg.Logger.Fatalf("failed to create client: %v", err)
+		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), ContextTimeout)
-		defer cancel()
+		ctxConfig, cancelConfig := context.WithTimeout(context.Background(), ContextTimeout)
+		defer cancelConfig()
 
-		if err := client.RegisterNode(ctx); err != nil {
-			cfg.Logger.Errorf("failed to register node: %v", err)
+		executionCfg, err := client.GetConfig(ctxConfig)
+		if err != nil {
+			cfg.Logger.Fatalf("failed to get config: %v", err)
+		}
+
+		normalizedTime := time.Duration(executionCfg.HealthCheckTimeout) * time.Nanosecond
+		// todo(): change this to a more accurate value
+		healthPeriod := normalizedTime / 2
+		for {
+			<-time.After(healthPeriod)
+
+			ctx, cancel := context.WithTimeout(context.Background(), normalizedTime)
+			defer cancel()
+
+			if err = client.ReportHealthStatus(ctx, &v1Consensus.HealthStatus{
+				Service: "gale-node",
+				Status:  uint32(v1Consensus.Serving),
+				Message: "Serving requests goes brrrrr",
+			}); err != nil {
+				cfg.Logger.Errorf("failed to report health status: %v", err)
+			}
 		}
 	}
 }

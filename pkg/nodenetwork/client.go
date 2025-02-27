@@ -3,7 +3,8 @@ package nodenetwork
 import (
 	"context"
 	"fmt"
-	"log"
+
+	"google.golang.org/protobuf/types/known/emptypb"
 
 	v1Consensus "github.com/yago-123/galelb/pkg/consensus/v1"
 
@@ -16,42 +17,50 @@ type Client struct {
 	conn   *grpc.ClientConn
 	client v1Consensus.LBNodeManagerClient
 
+	healthStream grpc.BidiStreamingClient[v1Consensus.HealthStatus, v1Consensus.HealthStatus]
+
 	logger *logrus.Logger
 }
 
-func New(logger *logrus.Logger, ip string, port int) *Client {
+func NewClient(logger *logrus.Logger, ip string, port int) (*Client, error) {
 	remoteServer := fmt.Sprintf("%s:%d", ip, port)
 
 	// todo(): we must have an array of remove servers for multi-node load balancer
 	conn, err := grpc.NewClient(remoteServer, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		log.Fatalf("could not connect to load balancer: %v", err)
+		return nil, fmt.Errorf("could not connect to load balancer: %v", err)
 	}
 
 	client := v1Consensus.NewLBNodeManagerClient(conn)
+	healthStream, err := client.ReportHealthStatus(context.Background())
+	if err != nil {
+		return nil, fmt.Errorf("could not report health status: %v", err)
+	}
 
 	return &Client{
-		conn:   conn,
-		client: client,
-		logger: logger,
-	}
+		conn:         conn,
+		client:       client,
+		healthStream: healthStream,
+		logger:       logger,
+	}, nil
 }
 
-func (s *Client) RegisterNode(ctx context.Context) error {
-	resp, err := s.client.RegisterNode(ctx, &v1Consensus.NodeInfo{
-		NodeId: "192.168.1.1",
-		Ip:     "192.168.1.1",
-		Port:   1234,
-	})
-
+func (c *Client) GetConfig(ctx context.Context) (v1Consensus.ConfigResponse, error) {
+	config, err := c.client.GetConfig(ctx, &emptypb.Empty{})
 	if err != nil {
-		return fmt.Errorf("error registering node: %w", err)
+		c.logger.Errorf("failed to get config: %v", err)
 	}
 
-	if !resp.GetSuccess() {
-		return fmt.Errorf("error registering node: %v", resp.GetMessage())
+	if config == nil {
+		// This should never happen, adding here just in case to avoid panic
+		return v1Consensus.ConfigResponse{}, fmt.Errorf("value retrieved in config is nil")
 	}
 
-	s.logger.Debugf("registered node with success", resp.GetSuccess(), resp.GetMessage())
-	return nil
+	c.logger.Debugf("received config: %v", config)
+
+	return *config, nil
+}
+
+func (c *Client) ReportHealthStatus(ctx context.Context, healthStatus *v1Consensus.HealthStatus) error {
+	return c.healthStream.Send(healthStatus)
 }

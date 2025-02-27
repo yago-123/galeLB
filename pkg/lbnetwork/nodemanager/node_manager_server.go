@@ -27,13 +27,12 @@ const (
 )
 
 type Server struct {
-	grpcServer *grpc.Server
-	port       int
+	grpcNodesServer *grpc.Server
 
 	cfg *lbConfig.Config
 }
 
-func New(cfg *lbConfig.Config, port int) *Server {
+func New(cfg *lbConfig.Config) *Server {
 	grpcServer := grpc.NewServer(
 		grpc.MaxRecvMsgSize(MaxRecvMsgSize),
 		grpc.MaxSendMsgSize(MaxSendMsgSize),
@@ -55,20 +54,18 @@ func New(cfg *lbConfig.Config, port int) *Server {
 	reflection.Register(grpcServer)
 
 	return &Server{
-		grpcServer: grpcServer,
-		port:       port,
-		cfg:        cfg,
+		grpcNodesServer: grpcServer,
+		cfg:             cfg,
 	}
 }
 
 func (s *Server) Start() {
-	addr := fmt.Sprintf("0.0.0.0:%d", s.port)
-	listener, err := net.Listen(DefaultL4Protocol, addr)
+	listener, err := net.Listen(DefaultL4Protocol, fmt.Sprintf(":%d", s.cfg.Local.NodePort))
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
 	}
 
-	if errServe := s.grpcServer.Serve(listener); errServe != nil {
+	if errServe := s.grpcNodesServer.Serve(listener); errServe != nil {
 		log.Fatalf("Failed to serve: %v", errServe)
 	}
 }

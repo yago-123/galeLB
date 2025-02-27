@@ -2,11 +2,12 @@ package node
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	common "github.com/yago-123/galelb/config"
-	"strings"
 )
 
 const (

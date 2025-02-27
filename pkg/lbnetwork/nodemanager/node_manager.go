@@ -37,7 +37,7 @@ type nodeManager struct {
 	nodeRegistryBlackList map[string]time.Time
 	nodeRegistryLock      sync.RWMutex
 
-	// internal structure required for gRPC implementation
+	// Internal structure required for gRPC implementation
 	v1Consensus.UnimplementedLBNodeManagerServer
 
 	logger *logrus.Logger
@@ -51,14 +51,18 @@ func newNodeManager(cfg *lbConfig.Config) *nodeManager {
 	}
 }
 
-func (s *nodeManager) GetConfig(ctx context.Context, req *emptypb.Empty) (*v1Consensus.ConfigResponse, error) {
-	// todo(): return s.cfg filtered to only the necessary fields
-	return &v1Consensus.ConfigResponse{}, nil
+func (s *nodeManager) GetConfig(ctx context.Context, _ *emptypb.Empty) (*v1Consensus.ConfigResponse, error) {
+	return &v1Consensus.ConfigResponse{
+		ChecksBeforeRouting: uint32(s.cfg.NodeHealth.ChecksBeforeRouting),
+		HealthCheckTimeout:  s.cfg.NodeHealth.ChecksTimeout.Nanoseconds(),
+		BlackListAfterFails: int64(s.cfg.NodeHealth.BlackListAfterFails),
+		BlackListExpiry:     s.cfg.NodeHealth.BlackListExpiry.Nanoseconds(),
+	}, nil
 }
 
-// ListenLoop is the main loop for listening to health checks from nodes. Nodes send health checks periodically to the
+// ReportHealthStatus is the main loop for listening to health checks from nodes. Nodes send health checks periodically to the
 // LB to indicate their presence. If a node does not send a health check within a certain timeout, it is removed.
-func (s *nodeManager) ListenLoop(stream grpc.BidiStreamingServer[v1Consensus.HealthStatus, v1Consensus.HealthStatus]) error {
+func (s *nodeManager) ReportHealthStatus(stream grpc.BidiStreamingServer[v1Consensus.HealthStatus, v1Consensus.HealthStatus]) error {
 	msgChan := make(chan *v1Consensus.HealthStatus, ChannelBufferSize)
 	errChan := make(chan error, ChannelBufferSize)
 
@@ -90,6 +94,8 @@ func (s *nodeManager) ListenLoop(stream grpc.BidiStreamingServer[v1Consensus.Hea
 				return
 			}
 
+			s.logger.Infof("received health check from node %s with status %d", nodeKey, req.GetStatus())
+
 			if err != nil {
 				errChan <- errRecv
 			}
@@ -101,9 +107,20 @@ func (s *nodeManager) ListenLoop(stream grpc.BidiStreamingServer[v1Consensus.Hea
 	// Main loop for receiving health checks
 	for {
 		select {
-		case _ = <-msgChan:
-			s.logger.Infof("received health check from node %s", nodeKey)
+		case msg := <-msgChan:
+			s.logger.Infof("received health check from node %s with status %d", nodeKey, msg.GetStatus())
 
+			if msg.Status == uint32(v1Consensus.NotServing) {
+				// todo(): think what to do
+				// todo(): release node info
+			} else if msg.Status == uint32(v1Consensus.ShuttingDown) {
+				// todo(): invoke quorum and re-route all traffic to other nodes
+				// todo(): release node info
+				s.logger.Infof("node %s is shutting down", nodeKey)
+				return nil
+			}
+
+			// If status is v1Consensus.Serving keep running the loop
 			if !s.nodeAlreadyPresent(nodeKey) {
 				s.registerNode(nodeKey)
 			}
@@ -113,6 +130,7 @@ func (s *nodeManager) ListenLoop(stream grpc.BidiStreamingServer[v1Consensus.Hea
 				<-timer.C
 			}
 			timer.Reset(s.cfg.NodeHealth.ChecksTimeout)
+
 		case err := <-errChan:
 			s.logger.Errorf("error receiving health status: %v", err)
 			if gRPCErrUnrecoverable(err) {
