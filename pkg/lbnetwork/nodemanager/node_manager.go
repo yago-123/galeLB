@@ -81,14 +81,44 @@ func (s *nodeManager) ReportHealthStatus(stream grpc.BidiStreamingServer[v1Conse
 
 	s.logger.Debugf("registered new connection from node %s", nodeKey)
 
+	// Spawn async function for listening for health checks from nodes
+	go s.listenerReportHealthStatus(nodeKey, msgChan, errChan, stream)
+
+	// Main loop for multiplexing health checks with errors and health check timeouts. Once this function returns it
+	// means that there has been an unrecoverable error or the node has been marked as unhealthy
+	return s.multiplexHealthStatus(nodeKey, msgChan, errChan)
+}
+
+// listenerReportHealthStatus is a helper function for listening to health checks from nodes. It abstracts the listener
+// logic from the main function to make the code more readable
+func (s *nodeManager) listenerReportHealthStatus(nodeKey string, msgChan chan *v1Consensus.HealthStatus, errChan chan error, stream grpc.BidiStreamingServer[v1Consensus.HealthStatus, v1Consensus.HealthStatus]) {
+	for {
+		// Wait for new updates from the node
+		req, errRecv := stream.Recv()
+		if gRPCErrUnrecoverable(errRecv) {
+			s.logger.Infof("stream closed by node %s", nodeKey)
+			errChan <- errRecv
+			return
+		}
+
+		s.logger.Infof("received health check from node %s with status %d", nodeKey, req.GetStatus())
+
+		if errRecv != nil {
+			errChan <- errRecv
+		}
+
+		msgChan <- req
+	}
+}
+
+// multiplexHealthStatus is in charge of multiplexing health status updates from nodes. It listens for health status
+// updates and errors from the node. If a node does not send a health check within a certain timeout, it is marked as
+// unhealthy and the traffic is rerouted to other nodes
+func (s *nodeManager) multiplexHealthStatus(nodeKey string, msgChan chan *v1Consensus.HealthStatus, errChan chan error) error {
 	// Set timeout for health checks. Nodes should send health checks at least once every half of this duration
 	timer := time.NewTimer(s.cfg.NodeHealth.ChecksTimeout)
 	defer timer.Stop()
 
-	// Spawn async function for listening for health checks from nodes
-	go s.listenerReportHealthStatus(nodeKey, msgChan, errChan, stream)
-
-	// Main loop for multiplexing health checks with errors and health check timeouts
 	for {
 		select {
 		case msg := <-msgChan:
@@ -99,7 +129,7 @@ func (s *nodeManager) ReportHealthStatus(stream grpc.BidiStreamingServer[v1Conse
 			} else if msg.Status == uint32(v1Consensus.ShuttingDown) {
 				// todo(): invoke quorum and re-route all traffic to other nodes
 				s.logger.Infof("node %s is shutting down", nodeKey)
-				return nil
+				return nil // todo(): change this return
 			}
 
 			// If status is v1Consensus.Serving keep running the loop
@@ -128,28 +158,6 @@ func (s *nodeManager) ReportHealthStatus(stream grpc.BidiStreamingServer[v1Conse
 			// todo(): do we really want to register/unregister or just keep a latest timestamp? s.unregisterNode(nodeKey) s.unregisterNode(nodeKey)
 			return fmt.Errorf("timed out waiting for health status from %s", nodeKey)
 		}
-	}
-}
-
-// listenerReportHealthStatus is a helper function for listening to health checks from nodes. It abstracts the listener
-// logic from the main function to make the code more readable
-func (s *nodeManager) listenerReportHealthStatus(nodeKey string, msgChan chan *v1Consensus.HealthStatus, errChan chan error, stream grpc.BidiStreamingServer[v1Consensus.HealthStatus, v1Consensus.HealthStatus]) {
-	for {
-		// Wait for new updates from the node
-		req, errRecv := stream.Recv()
-		if gRPCErrUnrecoverable(errRecv) {
-			s.logger.Infof("stream closed by node %s", nodeKey)
-			errChan <- errRecv
-			return
-		}
-
-		s.logger.Infof("received health check from node %s with status %d", nodeKey, req.GetStatus())
-
-		if errRecv != nil {
-			errChan <- errRecv
-		}
-
-		msgChan <- req
 	}
 }
 
