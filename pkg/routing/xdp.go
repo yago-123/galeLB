@@ -17,21 +17,21 @@ const (
 	RouterXDPProgName = "xdp_router"
 )
 
-type Router struct {
+type xdp struct {
 	netInterface string
 	port         int
 	logger       *logrus.Logger
 }
 
-func New(logger *logrus.Logger, netInterface string, incomingReqPort int) *Router {
-	return &Router{
+func newXDP(logger *logrus.Logger, netInterface string, incomingReqPort int) *xdp {
+	return &xdp{
 		netInterface: netInterface,
 		port:         incomingReqPort,
 		logger:       logger,
 	}
 }
 
-func (r *Router) LoadRouter() error {
+func (r *xdp) loadProgram() error {
 	if err := rlimit.RemoveMemlock(); err != nil {
 		return fmt.Errorf("error removing memlock: %w", err)
 	}
@@ -71,12 +71,8 @@ func (r *Router) LoadRouter() error {
 	return nil
 }
 
-func (r *Router) UnloadRouter() error {
+func (r *xdp) unloadProgram() error {
 	return nil
-}
-
-func (r *Router) UpdateRing() {
-
 }
 
 func getInterfaceIndex(netInterface string) (int, error) {

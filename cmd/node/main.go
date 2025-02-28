@@ -2,8 +2,9 @@ package main
 
 import (
 	"context"
-	v1Consensus "github.com/yago-123/galelb/pkg/consensus/v1"
 	"time"
+
+	v1Consensus "github.com/yago-123/galelb/pkg/consensus/v1"
 
 	nodeConfig "github.com/yago-123/galelb/config/node"
 	"github.com/yago-123/galelb/pkg/nodenetwork"

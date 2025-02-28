@@ -13,7 +13,7 @@
 SEC("xdp")
 int xdp_router(struct __sk_buff *skb) {
     // Drop the packet
-    return XDP_DROP;
+    return XDP_PASS;
 }
 
 SEC("license") char _license[] = "GPL";

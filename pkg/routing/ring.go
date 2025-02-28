@@ -1,4 +1,4 @@
-package ring
+package routing
 
 import (
 	"fmt"
@@ -13,7 +13,7 @@ func Crc32Hasher(key []byte) uint32 {
 	return crc32.ChecksumIEEE(key)
 }
 
-type ConsistentHashing struct {
+type ring struct {
 	ring            []uint32
 	nodes           map[uint32]string
 	numVirtualNodes int
@@ -22,20 +22,16 @@ type ConsistentHashing struct {
 	hasher Hasher
 }
 
-func New(hasher Hasher, numVirtualNodes int) (*ConsistentHashing, error) {
-	if numVirtualNodes < 1 {
-		return nil, fmt.Errorf("number of virtual nodes cannot be less than 1")
-	}
-
-	return &ConsistentHashing{
+func newRing(hasher Hasher, numVirtualNodes int) *ring {
+	return &ring{
 		ring:            []uint32{},
 		nodes:           make(map[uint32]string),
 		numVirtualNodes: numVirtualNodes,
 		hasher:          hasher,
-	}, nil
+	}
 }
 
-func (ch *ConsistentHashing) AddNode(node string) {
+func (ch *ring) addNode(node string) {
 	ch.lock.Lock()
 	defer ch.lock.Unlock()
 
@@ -52,7 +48,7 @@ func (ch *ConsistentHashing) AddNode(node string) {
 	sort.Slice(ch.ring, func(i, j int) bool { return ch.ring[i] < ch.ring[j] })
 }
 
-func (ch *ConsistentHashing) RemoveNode(node string) {
+func (ch *ring) removeNode(node string) {
 	ch.lock.Lock()
 	defer ch.lock.Unlock()
 
@@ -71,7 +67,7 @@ func (ch *ConsistentHashing) RemoveNode(node string) {
 	sort.Slice(ch.ring, func(i, j int) bool { return ch.ring[i] < ch.ring[j] })
 }
 
-func (ch *ConsistentHashing) GetNode(requestKey []byte) string {
+func (ch *ring) getNode(requestKey []byte) string {
 	ch.lock.RLock()
 	defer ch.lock.RUnlock()
 

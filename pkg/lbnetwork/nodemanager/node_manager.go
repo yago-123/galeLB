@@ -3,9 +3,10 @@ package nodemanager
 import (
 	"context"
 	"fmt"
-	"google.golang.org/protobuf/types/known/emptypb"
 	"net"
 	"time"
+
+	"google.golang.org/protobuf/types/known/emptypb"
 
 	"google.golang.org/grpc/peer"
 
@@ -35,7 +36,10 @@ type node struct {
 type nodeManager struct {
 	cfg *lbConfig.Config
 
+	// registry is the internal structure that keeps track of the nodes and their health status
 	registry *nodeRegistry
+
+	//
 
 	// Internal structure required for gRPC implementation
 	v1Consensus.UnimplementedLBNodeManagerServer
@@ -122,8 +126,6 @@ func (s *nodeManager) multiplexHealthStatus(nodeKey string, msgChan chan *v1Cons
 	for {
 		select {
 		case msg := <-msgChan:
-			s.logger.Infof("received health check from node %s with status %d", nodeKey, msg.GetStatus())
-
 			if msg.Status == uint32(v1Consensus.NotServing) {
 				// todo(): think what to do, we must re-route traffic for sure
 			} else if msg.Status == uint32(v1Consensus.ShuttingDown) {

@@ -1,14 +1,10 @@
 package main
 
 import (
-	"fmt"
-	"log"
-
 	"github.com/yago-123/galelb/pkg/lbnetwork/nodemanager"
 
 	"github.com/sirupsen/logrus"
 	lbConfig "github.com/yago-123/galelb/config/lb"
-	"github.com/yago-123/galelb/pkg/ring"
 	"github.com/yago-123/galelb/pkg/routing"
 )
 
@@ -22,16 +18,10 @@ func main() {
 
 	cfg.Logger.Infof("starting load balancer with config: %v", cfg)
 
-	// Create consistent hashing with 5 virtual nodes per real node
-	ch, err := ring.New(ring.Crc32Hasher, 5)
+	// Create routing mechanism with consistent hashing (5 virtual nodes per real node)
+	router, err := routing.New(cfg, 5)
 	if err != nil {
-		log.Fatalf("Error creating ring: %s", err)
-	}
-
-	// Load dummy eBPF program
-	router := routing.New(cfg.Logger, cfg.Local.NetIfaceClients, cfg.Local.ClientsPort)
-	if errLoad := router.LoadRouter(); errLoad != nil {
-		log.Fatalf("failed to load router, ensure you have the required permissions: %s", errLoad)
+		cfg.Logger.Fatalf("failed to create router: %s", err)
 	}
 
 	// Create gRPC server for managing nodes
@@ -39,12 +29,12 @@ func main() {
 	server.Start()
 
 	// Add some nodes
-	ch.AddNode("Node1")
-	ch.AddNode("Node2")
-	ch.AddNode("Node3")
+	router.AddNode("Node1", "192.168.1.2", 9091)
+	router.AddNode("Node2", "192.168.1.3", 9091)
+	router.AddNode("Node3", "192.168.1.4", 9091)
 
 	// Hash the IP of a request
-	for i := 0; i < 15; i++ {
-		cfg.Logger.Infof("request from IP will be routed to %s\n", ch.GetNode([]byte(fmt.Sprintf("113.168.1.1%d", i))))
-	}
+	// for i := 0; i < 15; i++ {
+	// 	cfg.Logger.Infof("request from IP will be routed to %s\n", router.GetNode([]byte(fmt.Sprintf("113.168.1.1%d", i))))
+	// }
 }
