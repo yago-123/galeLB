@@ -13,6 +13,7 @@ service LBNodeManager {
   // ReportHealthStatus is used by nodes to report their health status to a load balancer. Nodes must connect to load
   // balancers to inform them of their health status. This stream is bidirectional because, in some cases, the load
   // balancer may need to request a node's health status outside predefined intervals for example, when it receives information from other load balancers indicating a node is down.
+  // todo(): this probably will be changed to uni-directional stream
   rpc ReportHealthStatus(stream HealthStatus) returns (stream HealthStatus);
 }
 
