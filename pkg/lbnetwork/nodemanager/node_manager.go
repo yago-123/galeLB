@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"net"
-	"sync"
 	"time"
 
 	"google.golang.org/grpc/peer"
@@ -36,19 +35,7 @@ type node struct {
 type nodeManager struct {
 	cfg *lbConfig.Config
 
-	// nodeRegistry is used to keep track of all nodes that are connected to the load balancer. This is used to keep
-	// track of nodes to which we should route traffic.
-	nodeRegistry map[string]*node
-
-	// nodeRegistryBlackList is used to keep track of nodes that have failed health checks.
-	nodeRegistryBlackList map[string]time.Time
-
-	// nodeRegistryLock is used to prevent race conditions when writing to the node registry. In theory, this lock is
-	// not required given that the nodeKey + the nature of gRPC connections makes it impossible for a node struct to
-	// generate the same exact connection (same IP + ephemeral port). However, it is a good practice to have a lock for
-	// the registry to prevent any unexpected behaviour. In case of this lock being a bottleneck, it could be removed
-	// and replaced with a more fine-grained lock (that still, would not be needed at all in theory).
-	nodeRegistryLock sync.RWMutex
+	registry *nodeRegistry
 
 	// Internal structure required for gRPC implementation
 	v1Consensus.UnimplementedLBNodeManagerServer
@@ -58,9 +45,9 @@ type nodeManager struct {
 
 func newNodeManager(cfg *lbConfig.Config) *nodeManager {
 	return &nodeManager{
-		cfg:          cfg,
-		nodeRegistry: map[string]*node{},
-		logger:       cfg.Logger,
+		cfg:      cfg,
+		registry: newNodeRegistry(cfg.Logger),
+		logger:   cfg.Logger,
 	}
 }
 
@@ -90,7 +77,7 @@ func (s *nodeManager) ReportHealthStatus(stream grpc.BidiStreamingServer[v1Conse
 	}
 
 	// Register the node if it is not already present
-	s.registerNode(nodeKey)
+	s.registry.registerNode(nodeKey)
 
 	s.logger.Debugf("registered new connection from node %s", nodeKey)
 
@@ -116,7 +103,7 @@ func (s *nodeManager) ReportHealthStatus(stream grpc.BidiStreamingServer[v1Conse
 			}
 
 			// If status is v1Consensus.Serving keep running the loop
-			s.reportNewHealthCheck(nodeKey)
+			s.registry.reportNewHealthCheck(nodeKey)
 
 			// Drain and reset the timer
 			if !timer.Stop() {
@@ -127,7 +114,8 @@ func (s *nodeManager) ReportHealthStatus(stream grpc.BidiStreamingServer[v1Conse
 		case err := <-errChan:
 			s.logger.Errorf("error receiving health status: %v", err)
 			if gRPCErrUnrecoverable(err) {
-				s.reportNodeFailure(nodeKey)
+				s.registry.reportNodeFailure(nodeKey)
+				// todo(): trigger action for start rerouting traffic
 				// todo(): do we really want to register/unregister or just keep a latest timestamp? s.unregisterNode(nodeKey)
 				return fmt.Errorf("unrecoverable error receiving health status: %w", err)
 			}
@@ -135,7 +123,8 @@ func (s *nodeManager) ReportHealthStatus(stream grpc.BidiStreamingServer[v1Conse
 			// Do not drain the timer, as we want to stop tracking this node if it does not send health status
 			// todo(): may be worth to send (timeout/2) - 1?
 		case <-timer.C:
-			s.reportNodeFailure(nodeKey)
+			s.registry.reportNodeFailure(nodeKey)
+			// todo(): trigger action for start rerouting traffic
 			// todo(): do we really want to register/unregister or just keep a latest timestamp? s.unregisterNode(nodeKey) s.unregisterNode(nodeKey)
 			return fmt.Errorf("timed out waiting for health status from %s", nodeKey)
 		}
@@ -162,50 +151,6 @@ func (s *nodeManager) listenerReportHealthStatus(nodeKey string, msgChan chan *v
 
 		msgChan <- req
 	}
-}
-
-// registerNode adds a node to the registry
-func (s *nodeManager) registerNode(nodeKey string) {
-	s.nodeRegistryLock.Lock()
-	defer s.nodeRegistryLock.Unlock()
-
-	if _, ok := s.nodeRegistry[nodeKey]; !ok {
-		s.nodeRegistry[nodeKey] = &node{}
-	}
-}
-
-// reportNewHealthCheck updates the last health check time for a node. Updates info such as todo()
-func (s *nodeManager) reportNewHealthCheck(nodeKey string) {
-	s.nodeRegistryLock.Lock()
-	defer s.nodeRegistryLock.Unlock()
-
-	nodeInfo, ok := s.nodeRegistry[nodeKey]
-	if !ok {
-		// This case should never happen as we are only calling this function after checking if the node is present
-		s.logger.Errorf("unable to load node %s from registry ", nodeKey)
-		return
-	}
-
-	nodeInfo.lastHealthCheck = time.Now()
-	nodeInfo.continuousHealthChecks++
-}
-
-func (s *nodeManager) reportNodeFailure(nodeKey string) {
-	s.nodeRegistryLock.Lock()
-	defer s.nodeRegistryLock.Unlock()
-
-	s.logger.Debugf("node %s failed to report health check", nodeKey)
-
-	nodeInfo, ok := s.nodeRegistry[nodeKey]
-	if !ok {
-		// This case should never happen as we are only calling this function after checking if the node is present
-		s.logger.Errorf("unable to load node %s from registry ", nodeKey)
-		return
-	}
-
-	nodeInfo.continuousHealthChecks = 0
-
-	// todo(): trigger action for start rerouting traffic
 }
 
 // gRPCErrUnrecoverable checks if an error is unrecoverable. This is useful for checking if a stream has been closed
