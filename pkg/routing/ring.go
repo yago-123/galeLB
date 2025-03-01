@@ -1,21 +1,22 @@
 package routing
 
+/*
+#cgo CFLAGS: -I./pkg/routing
+#include "constants.h"
+*/
+import "C"
+
 import (
 	"fmt"
-	"hash/crc32"
 	"sort"
 	"sync"
+
+	"github.com/yago-123/galelb/pkg/common"
 )
-
-type Hasher func([]byte) uint32
-
-func Crc32Hasher(key []byte) uint32 {
-	return crc32.ChecksumIEEE(key)
-}
 
 type ring struct {
 	ring            []uint32
-	nodes           map[uint32]string
+	nodes           map[uint32]common.AddrKey
 	numVirtualNodes int
 
 	lock   sync.RWMutex
@@ -24,20 +25,23 @@ type ring struct {
 
 func newRing(hasher Hasher, numVirtualNodes int) *ring {
 	return &ring{
-		ring:            []uint32{},
-		nodes:           make(map[uint32]string),
+		ring:            make([]uint32, C.MAX_NUMBER_VIRTUAL_NODE_ENTRIES),
+		nodes:           make(map[uint32]common.AddrKey),
 		numVirtualNodes: numVirtualNodes,
 		hasher:          hasher,
 	}
 }
 
-func (ch *ring) addNode(node string) {
+func (ch *ring) addNode(node common.AddrKey) {
 	ch.lock.Lock()
 	defer ch.lock.Unlock()
 
+	// todo(): check that is not already present?
+	// todo(): make sure that does not overflow the ring nor the nodes map
+
 	// Hash the virtual node and persist into the ring
 	for i := 0; i < ch.numVirtualNodes; i++ {
-		virtualNode := fmt.Sprintf("%s-%d", node, i)
+		virtualNode := fmt.Sprintf("%s-%d", addrToString(node), i)
 		hash := ch.hasher([]byte(virtualNode))
 
 		ch.ring = append(ch.ring, hash)
@@ -48,13 +52,13 @@ func (ch *ring) addNode(node string) {
 	sort.Slice(ch.ring, func(i, j int) bool { return ch.ring[i] < ch.ring[j] })
 }
 
-func (ch *ring) removeNode(node string) {
+func (ch *ring) removeNode(node common.AddrKey) {
 	ch.lock.Lock()
 	defer ch.lock.Unlock()
 
 	// Remove the virtual nodes from the map
 	for i := 0; i < ch.numVirtualNodes; i++ {
-		virtualNode := fmt.Sprintf("%s-%d", node, i)
+		virtualNode := fmt.Sprintf("%s-%d", addrToString(node), i)
 		hash := ch.hasher([]byte(virtualNode))
 		delete(ch.nodes, hash)
 	}
@@ -78,5 +82,9 @@ func (ch *ring) getNode(requestKey []byte) string {
 	if i == len(ch.ring) {
 		i = 0
 	}
-	return ch.nodes[ch.ring[i]]
+	return addrToString(ch.nodes[ch.ring[i]])
+}
+
+func addrToString(addr common.AddrKey) string {
+	return fmt.Sprintf("%d:%d", addr.IP, addr.Port)
 }

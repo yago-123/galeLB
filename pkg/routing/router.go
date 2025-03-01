@@ -3,6 +3,8 @@ package routing
 import (
 	"fmt"
 
+	"github.com/yago-123/galelb/pkg/common"
+
 	lbConfig "github.com/yago-123/galelb/config/lb"
 )
 
@@ -28,10 +30,10 @@ func New(cfg *lbConfig.Config, numVirtualNodes int) (*Router, error) {
 	}, nil
 }
 
-func (r *Router) AddNode(nodeKey string, ip string, port int) {
+func (r *Router) AddNode(nodeKey common.AddrKey, ip string, port int) {
 	r.ring.addNode(nodeKey)
 }
 
-func (r *Router) RemoveNode(nodeKey string) {
+func (r *Router) RemoveNode(nodeKey common.AddrKey) {
 	r.ring.removeNode(nodeKey)
 }

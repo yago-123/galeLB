@@ -7,8 +7,26 @@
 #include <linux/if_packet.h>
 #include <linux/ptrace.h>
 #include <linux/bpf_common.h>
+#include <bpf/bpf_helpers.h>
 
-#define SEC(NAME) __attribute__((section(NAME), used))
+#include "constants.h"
+
+// defined in pkg/common/
+#include "common.h"
+
+struct {
+    __uint(type, BPF_MAP_TYPE_ARRAY);
+    __uint(max_entries, MAX_NUMBER_VIRTUAL_NODE_ENTRIES);
+    __type(key, __u32);
+    __type(value, __u32);
+} xdp_array_map SEC(".maps");
+
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __uint(max_entries, MAX_NUMBER_VIRTUAL_NODE_ENTRIES);
+    __type(key, __u32);
+    __type(value, ip_port_key);
+} xdp_hash_map SEC(".maps");
 
 SEC("xdp")
 int xdp_router(struct __sk_buff *skb) {
