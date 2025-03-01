@@ -5,7 +5,9 @@ CONSENSUS_PROTOBUF_DIR := pkg/consensus/v1
 
 # Define eBPF compiler and CFlags
 BPF_CLANG = clang
-BPF_CFLAGS = -target bpf -I/usr/include/linux -I/usr/include
+BPF_CFLAGS = -O2 -emit-llvm -c -g -target bpf -I/usr/include/linux -I/usr/include
+BPF_APP_IMPORTS = -Ipkg/common
+BPF_LLC_FLAGS = -march=bpf -filetype=obj
 
 # Define build flags for Go
 GCFLAGS := -gcflags "all=-N -l"
@@ -35,7 +37,7 @@ lb: protobuf xdp_router
 
 .PHONY: xdp_router
 xdp_router:
-	$(BPF_CLANG) -O2 -emit-llvm -c -g pkg/routing/router.c -o - | llc -march=bpf -filetype=obj -o $(XDP_OBJECT_OUTPUT)
+	$(BPF_CLANG) $(BPF_CFLAGS) $(BPF_APP_IMPORTS) pkg/routing/router.c -o - | llc $(BPF_LLC_FLAGS) -o $(XDP_OBJECT_OUTPUT)
 
 .PHONY: node
 node: protobuf
