@@ -1,4 +1,4 @@
 [load_balancer]
 addresses = [
-    { ip = "127.0.0.1", port = 7070 }
+    { ip = "192.168.0.201", port = 7070 }
 ]

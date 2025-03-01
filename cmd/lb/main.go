@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/yago-123/galelb/pkg/common"
 	"github.com/yago-123/galelb/pkg/lbnetwork/nodemanager"
 
 	"github.com/sirupsen/logrus"
@@ -29,9 +30,9 @@ func main() {
 	server.Start()
 
 	// Add some nodes
-	router.AddNode("Node1", "192.168.1.2", 9091)
-	router.AddNode("Node2", "192.168.1.3", 9091)
-	router.AddNode("Node3", "192.168.1.4", 9091)
+	router.AddNode(common.AddrKey{}, "192.168.1.2", 9091)
+	router.AddNode(common.AddrKey{}, "192.168.1.3", 9091)
+	router.AddNode(common.AddrKey{}, "192.168.1.4", 9091)
 
 	// Hash the IP of a request
 	// for i := 0; i < 15; i++ {

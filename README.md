@@ -1,10 +1,15 @@
 # GaleLB: multi-node L4 load balancer
 
 Supports: 
+- [ ] L2-Based Forwarding (Stateless MAC Bridging in `XDP`)
 - [ ] L3-Based Forwarding (Stateless IP Routing in `XDP`)
 - [ ] L4-Based Forwarding (Stateful `NAT` with Connection Tracking in `XDP + TC`)]
 
 ## Requirements 
+* Linux Kernel 4.4+
+* Clang 18+
+* LLVM 18+
+* 64 bit architecture and x86 CPU
 
 ## Architecture
 
@@ -16,8 +21,10 @@ Load balancer configuration:
 node_port = 7070
 # port opened to listen for incoming connections from clients
 clients_port = 8080
+# interface used to communicate and re-route network packets to nodes
+net_interface_nodes = "wlo1"
 # interface used to retrieve and re-route network packets from clients 
-net_interface_clients = "eno1"
+net_interface_clients = "wlo1"
 
 [node_health]
 # number of continuous health checks that must be passed before being eligible for routing destination
@@ -40,20 +47,20 @@ black_list_expiry = "5m"
 # be ignored
 enforce_single_configuration = false
 
-#addresses = [
-#    { ip = "192.168.1.1", port = 7070 },
-#    { ip = "192.168.1.2", port = 8080 },
-#    { ip = "192.168.1.3", port = 9090 }
-#]
+addresses = [
+    { ip = "192.168.1.2", port = 8081 },
+    { ip = "192.168.1.3", port = 8081 },
+    { ip = "192.168.1.4", port = 8081 }
+]
 ```
 
 Node configuration:
 ```toml
 [load_balancer]
 addresses = [
-    { ip = "192.168.1.1", port = 7070 },
-    { ip = "192.168.1.2", port = 8080 },
-    { ip = "192.168.1.3", port = 9090 }
+    { ip = "192.168.1.2", port = 8082 },
+    { ip = "192.168.1.3", port = 8082 },
+    { ip = "192.168.1.4", port = 8082 }
 ]
 ```
 

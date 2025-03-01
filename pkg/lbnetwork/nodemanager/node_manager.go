@@ -6,6 +6,8 @@ import (
 	"net"
 	"time"
 
+	"github.com/yago-123/galelb/pkg/util"
+
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	"google.golang.org/grpc/peer"
@@ -75,15 +77,30 @@ func (s *nodeManager) ReportHealthStatus(stream grpc.BidiStreamingServer[v1Conse
 	defer close(errChan)
 
 	// nodeKey will be used to access the node registry-related info for the node
-	nodeKey, err := extractNodeKeyFromConn(stream)
+	tcpAddr, err := extractTCPFromConn(stream)
 	if err != nil {
 		return fmt.Errorf("failed to extract peer info from stream: %w", err)
 	}
 
+	// Try to retrieve the MAC address from the ARP cache. If it fails, try to get it via an ARP call
+	mac, err := util.GetMACFromARPCache(tcpAddr.IP.String(), s.cfg.Local.NetIfaceNodes)
+	if err != nil {
+		s.logger.Warnf("failed to get MAC address from ARP cache: %v", err)
+
+		mac, err = util.GetMACViaARPCall(tcpAddr.IP.String(), s.cfg.Local.NetIfaceNodes)
+		if err != nil {
+			s.logger.Errorf("failed to get MAC address via ARP call: %v", err)
+			return fmt.Errorf("failed to get MAC address via ARP call: %w", err)
+		}
+	}
+
+	// todo(): replace this
+	nodeKey := tcpAddr.String()
+
 	// Register the node if it is not already present
 	s.registry.registerNode(nodeKey)
 
-	s.logger.Debugf("registered new connection from node %s", nodeKey)
+	s.logger.Debugf("registered new connection from node %s with mac %s", nodeKey, mac)
 
 	// Spawn async function for listening for health checks from nodes
 	go s.listenerReportHealthStatus(nodeKey, msgChan, errChan, stream)
@@ -169,18 +186,18 @@ func gRPCErrUnrecoverable(err error) bool {
 	return status.Code(err) == codes.Canceled || status.Code(err) == codes.Unavailable
 }
 
-// extractNodeKeyFromConn extracts the node key from the connection. Required for uniquely identifying nodes in the
+// extractTCPFromConn extracts the node key from the connection. Required for uniquely identifying nodes in the
 // registry
-func extractNodeKeyFromConn(stream grpc.BidiStreamingServer[v1Consensus.HealthStatus, v1Consensus.HealthStatus]) (string, error) {
+func extractTCPFromConn(stream grpc.BidiStreamingServer[v1Consensus.HealthStatus, v1Consensus.HealthStatus]) (net.TCPAddr, error) {
 	p, ok := peer.FromContext(stream.Context())
 	if ok {
 		if addr, okTcp := p.Addr.(*net.TCPAddr); okTcp {
 			// Make sure that addr is not nil just in case, it should never be nil
 			if addr != nil {
-				return addr.String(), nil
+				return *addr, nil
 			}
 		}
 	}
 
-	return "", fmt.Errorf("failed to extract peer info from stream")
+	return net.TCPAddr{}, fmt.Errorf("failed to extract peer info from stream")
 }
