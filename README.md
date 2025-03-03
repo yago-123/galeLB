@@ -6,10 +6,14 @@ Supports:
 - [ ] L4-Based Forwarding (Stateful `NAT` with Connection Tracking in `XDP + TC`)]
 
 ## Requirements 
+System requirements: 
 * Linux Kernel 4.4+
 * Clang 18+
 * LLVM 18+
 * 64 bit architecture and x86 CPU
+
+Network: 
+* Make sure that ARP is enabled on the network interface that communicates the load balancer with the nodes.
 
 ## Architecture
 
@@ -90,3 +94,12 @@ Install `protobuf` and `protoc`:
 $ go get google.golang.org/protobuf/cmd/protoc-gen-go
 $ go install google.golang.org/grpc/cmd/protoc-gen-go-grpc
 ```
+
+# Running e2e tests 
+Create the vagrant machines with the network card connected to the LAN (for example `eth0` or `wlo1`):
+```bash 
+$ NETWORK_CARD=<net-card> vagrant up --chdir=e2e
+```
+
+This will spawn 3 load balancer instances and 3 node instances. All machines install `avahi-daemon` package in order to 
+enable `mDNS` service discovery.
