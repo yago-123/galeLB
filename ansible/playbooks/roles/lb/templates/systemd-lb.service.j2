@@ -1,0 +1,12 @@
+[Unit]
+Description=GaleLB load balancer service
+After=network.target
+
+[Service]
+ExecStart={{ app_dir }}/bin/gale-lb --config {{ app_dir }}/config.yaml
+Restart=always
+StandardOutput=append:/var/log/gale-lb/service.log
+StandardError=append:/var/log/gale-lb/service.err.log
+
+[Install]
+WantedBy=multi-user.target

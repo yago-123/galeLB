@@ -1,0 +1,12 @@
+[Unit]
+Description=GaleLB node service
+After=network.target
+
+[Service]
+ExecStart={{ app_dir }}/bin/gale-node --config {{ app_dir }}/config.yaml
+Restart=always
+StandardOutput=append:/var/log/gale-node/service.log
+StandardError=append:/var/log/gale-node/service.err.log
+
+[Install]
+WantedBy=multi-user.target
