@@ -1,6 +1,8 @@
 package routing
 
 import (
+	"bytes"
+	_ "embed"
 	"fmt"
 	"net"
 
@@ -11,6 +13,9 @@ import (
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
 )
+
+//go:embed xdp_obj/xdp_router.o
+var xdpProg []byte
 
 const (
 	RouterXDPProgPath = "pkg/routing/xdp_obj/xdp_router.o"
@@ -36,11 +41,16 @@ func (r *xdp) loadProgram() error {
 		return fmt.Errorf("error removing memlock: %w", err)
 	}
 
-	// Load the XDP object file (ELF)
-	// todo(): this should be loaded with embed instead
-	collection, err := ebpf.LoadCollection(RouterXDPProgPath)
+	// Load spec from the embedded XDP object
+	spec, err := ebpf.LoadCollectionSpecFromReader(bytes.NewReader(xdpProg))
 	if err != nil {
-		return fmt.Errorf("failed to load XDP collection: %w", err)
+		return fmt.Errorf("failed to load XDP collection spec: %w", err)
+	}
+
+	// Load the XDP object file (ELF)
+	collection, err := ebpf.NewCollection(spec)
+	if err != nil {
+		return fmt.Errorf("failed to create XDP collection: %w", err)
 	}
 	defer collection.Close()
 
