@@ -7,14 +7,11 @@ CONSENSUS_PROTOBUF_DIR := pkg/consensus/v1
 KERNEL_HEADERS := /usr/src/linux-headers-$(shell uname -r)
 
 # Define eBPF compiler and CFlags
-BPF_CLANG = clang
-BPF_CFLAGS = -O2 -emit-llvm -c -g -target bpf \
-             -I$(KERNEL_HEADERS)/include \
-             -I$(KERNEL_HEADERS)/include/uapi \
-             -I$(KERNEL_HEADERS)/include/generated/uapi \
-             -I/usr/include/linux -I/usr/include
+BPF_CLANG := clang
+BPF_CFLAGS = -O2 -emit-llvm -c -g -target bpf -I$(KERNEL_HEADERS)/include/linux
+
 BPF_APP_IMPORTS = -Ipkg/common
-BPF_LLC_FLAGS = -march=bpf -filetype=obj
+BPF_LLC_FLAGS := -march=bpf -filetype=obj
 
 # Define build flags for Go
 GCFLAGS := -gcflags "all=-N -l"
