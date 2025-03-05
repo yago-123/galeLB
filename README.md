@@ -96,10 +96,36 @@ $ go install google.golang.org/grpc/cmd/protoc-gen-go-grpc
 ```
 
 # Running e2e tests 
+Create a new key pair of SSH keys for the vagrant machines:
+```bash
+$ ssh-keygen -t ed25519  -f ~/.ssh/vagrant -N ""
+```
+
+Make sure that the SSH-agent is running and add the newly created key:
+```bash
+$ eval "$(ssh-agent -s)"
+$ ssh-add ~/.ssh/vagrant
+```
+
 Create the vagrant machines with the network card connected to the LAN (for example `eth0` or `wlo1`):
 ```bash 
-$ NETWORK_CARD=<net-card> vagrant up --chdir=e2e
+$ cd e2e && NETWORK_CARD=<net-card> SSH_KEY_PATH=~/.ssh/vagrant.pub vagrant up
 ```
 
 This will spawn 3 load balancer instances and 3 node instances. All machines install `avahi-daemon` package in order to 
-enable `mDNS` service discovery.
+enable `mDNS` service discovery. Once instances are up, provision the load balancer and the nodes:
+```bash
+$ ansible-playbook -i ansible/inventories/e2e-hosts.ini \
+                      ansible/playbooks/lb.yml
+$ ansible-playbook -i ansible/inventories/e2e-hosts.ini \
+                      ansible/playbooks/node.yml
+```
+
+
+
+
+
+Once you've finished testing the load balancer, you can destroy the machines:
+```bash
+$ cd e2e && vagrant destroy -f
+```

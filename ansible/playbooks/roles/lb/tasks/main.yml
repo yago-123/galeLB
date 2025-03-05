@@ -30,30 +30,111 @@
 
 - name: Download and install Go binary
   block:
-    - name: Download Go binary
+    - name: Check if Go is installed
+      stat:
+        path: "/usr/local/go/bin/go"
+      register: go_installed
+
+    - name: Download Go binary if not installed
       get_url:
         url: "https://go.dev/dl/go{{ go_version }}.linux-amd64.tar.gz"
         dest: "/tmp/go{{ go_version }}.linux-amd64.tar.gz"
+      when: not go_installed.stat.exists
 
-    - name: Extract Go binary
+    - name: Extract Go binary if not installed
       unarchive:
         src: "/tmp/go{{ go_version }}.linux-amd64.tar.gz"
         dest: "/usr/local"
         remote_src: yes
+      when: not go_installed.stat.exists
   tags:
     - go
 
 - name: Install Go tools
-  shell: |
-    go install google.golang.org/protobuf/cmd/protoc-gen-go@latest && \
-    go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+  block:
+    - name: Check if protoc-gen-go is installed
+      shell: "which protoc-gen-go"
+      register: protoc_gen_go_installed
+      ignore_errors: yes
+
+    - name: Install protoc-gen-go tool if not installed
+      shell: "go install google.golang.org/protobuf/cmd/protoc-gen-go@latest"
+      when: protoc_gen_go_installed.rc != 0
+
+    - name: Check if protoc-gen-go-grpc is installed
+      shell: "which protoc-gen-go-grpc"
+      register: protoc_gen_go_grpc_installed
+      ignore_errors: yes
+
+    - name: Install protoc-gen-go-grpc tool if not installed
+      shell: "go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest"
+      when: protoc_gen_go_grpc_installed.rc != 0
   environment:
     PATH: "/usr/local/go/bin"
   tags:
     - go-tools
 
+- name: Install Clang 18 and llc if not present
+  block:
+    - name: Check if Clang is installed
+      command: clang --version
+      register: clang_installed
+      ignore_errors: yes
+
+    - name: Check if llc is installed
+      command: llc --version
+      register: llc_installed
+      ignore_errors: yes
+
+    - name: Add LLVM repository GPG key if Clang or llc is not installed
+      apt_key:
+        url: https://apt.llvm.org/llvm-snapshot.gpg.key
+        state: present
+      when: clang_installed.rc != 0 or llc_installed.rc != 0
+
+    - name: Add LLVM repository if Clang or llc is not installed
+      apt_repository:
+        repo: "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-18 main"
+        state: present
+        filename: "llvm"
+      when: clang_installed.rc != 0 or llc_installed.rc != 0
+
+    - name: Install Clang 18 and llvm-18 if not installed
+      apt:
+        name:
+          - clang-18
+          - llvm-18
+        state: present
+      when: clang_installed.rc != 0 or llc_installed.rc != 0
+
+    - name: Create symbolic link for clang to clang-18
+      file:
+        src: "/usr/bin/clang-18"
+        dest: "/usr/bin/clang"
+        state: link
+      when: clang_installed.rc != 0
+
+    - name: Create symbolic link for llc to llc-18
+      file:
+        src: "/usr/bin/llc-18"
+        dest: "/usr/bin/llc"
+        state: link
+      when: llc_installed.rc != 0
+
+  tags:
+    - clang
+    - llc
+
+- name: Install linux headers
+  become: yes
+  shell: |
+    sudo apt-get update
+    sudo apt-get install -y linux-headers-$(uname -r) build-essential
+  tags:
+    - linux-headers
+
 - name: Build the application with make
-  shell: make {{ target }}
+  shell: make lb
   args:
     chdir: "{{ app_dir }}"
   environment:

@@ -9,6 +9,12 @@ Vagrant.configure("2") do |config|
     "node-1", "node-2", "node-3"
   ]
 
+  # Read SSH key name from environment or default to "~/.ssh/vagrant.pub"
+  ssh_key_name = ENV['SSH_KEY_PATH'] || "~/.ssh/vagrant.pub"
+
+  # Read the SSH key
+  public_key = File.read(File.expand_path(ssh_key_name)).strip
+
   machines.each do |hostname|
     config.vm.define hostname do |vm|
       vm.vm.hostname = hostname  # Set hostname
@@ -24,6 +30,13 @@ Vagrant.configure("2") do |config|
         sudo apt update
         sudo apt install -y avahi-daemon
         sudo systemctl enable --now avahi-daemon
+
+        # Add SSH public key login for vagrant user
+        sudo mkdir -p /home/vagrant/.ssh
+        echo "#{public_key}" | sudo tee -a /home/vagrant/.ssh/authorized_keys > /dev/null
+        #sudo chmod 600 /home/vagrant/.ssh/authorized_keys
+        #sudo chmod 700 /home/vagrant/.ssh
+        #sudo chown -R vagrant:vagrant /home/vagrant/.ssh
       SHELL
     end
   end
