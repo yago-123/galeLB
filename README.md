@@ -115,9 +115,9 @@ $ cd e2e && NETWORK_CARD=<net-card> SSH_KEY_PATH=~/.ssh/vagrant.pub vagrant up
 This will spawn 3 load balancer instances and 3 node instances. All machines install `avahi-daemon` package in order to 
 enable `mDNS` service discovery. Once instances are up, provision the load balancer and the nodes:
 ```bash
-$ ansible-playbook -i ansible/inventories/e2e-hosts.ini \
+$ ansible-playbook -i ansible/e2e-hosts.ini \
                       ansible/playbooks/lb.yml
-$ ansible-playbook -i ansible/inventories/e2e-hosts.ini \
+$ ansible-playbook -i ansible/e2e-hosts.ini \
                       ansible/playbooks/node.yml
 ```
 

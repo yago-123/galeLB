@@ -18,15 +18,15 @@
   tags:
     - directory
 
-- name: Clone the repository
-  git:
-    repo: "{{ repo_url }}"
-    dest: "{{ app_dir }}"
-    version: "{{ branch }}"
-    force: yes
-    update: yes
-  tags:
-    - git
+#- name: Clone the repository
+#  git:
+#    repo: "{{ repo_url }}"
+#    dest: "{{ app_dir }}"
+#    version: "{{ branch }}"
+#    force: yes
+#    update: yes
+#  tags:
+#    - git
 
 - name: Download and install Go binary
   block:
@@ -133,6 +133,44 @@
   tags:
     - linux-headers
 
+- name: Get the current kernel version
+  become: yes
+  command: uname -r
+  register: kernel_version
+
+- name: Check if /usr/include/linux exists
+  become: yes
+  stat:
+    path: /usr/include/linux
+  register: linux_dir
+
+- name: Install libbpf-dev
+  become: yes
+  apt:
+    name: libbpf-dev
+    state: present
+    update_cache: yes
+
+- name: Create symlink for /usr/include/linux based on current kernel version
+  become: yes
+  file:
+    src: "/usr/src/linux-headers-{{ kernel_version.stdout }}/include/linux"
+    dest: /usr/include/linux
+    state: link
+  when: not linux_dir.stat.exists
+
+- name: Check if {{ app_dir }}/pkg/routing/xdp_obj exists
+  stat:
+    path: "{{ app_dir }}/pkg/routing/xdp_obj"
+  register: xdp_obj_stat
+
+- name: Create {{ app_dir }}/pkg/routing/xdp_obj if it doesn't exist
+  file:
+    path: "{{ app_dir }}/pkg/routing/xdp_obj"
+    state: directory
+    mode: '0755'
+  when: not xdp_obj_stat.stat.exists
+
 - name: Build the application with make
   shell: make lb
   args:
@@ -144,7 +182,7 @@
 
 - name: Copy the configuration file
   copy:
-    src: "{{ config }}"
+    content: "{{ config_file_content }}"
     dest: "{{ app_dir }}/config.yaml"
     mode: '0644'
 

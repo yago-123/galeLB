@@ -3,12 +3,9 @@
 OUTPUT_DIR := bin
 CONSENSUS_PROTOBUF_DIR := pkg/consensus/v1
 
-# Define path to kernel headers (required for building XDP programs)
-KERNEL_HEADERS := /usr/src/linux-headers-$(shell uname -r)
-
 # Define eBPF compiler and CFlags
 BPF_CLANG := clang
-BPF_CFLAGS = -O2 -emit-llvm -c -g -target bpf -I$(KERNEL_HEADERS)/include/linux
+BPF_CFLAGS = -O2 -emit-llvm -c -g -target bpf -I/usr/include/linux -I/usr/include/linux/bpf
 
 BPF_APP_IMPORTS = -Ipkg/common
 BPF_LLC_FLAGS := -march=bpf -filetype=obj

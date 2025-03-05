@@ -7,7 +7,7 @@
     repo_url: 'https://github.com/yago-123/galelb.git'
     branch: 'master'
     app_dir: /var/gale-lb
-    config: lb.yaml
+    config: ../cmd/lb.toml
     go_version: '1.24.0'
   roles:
     - lb
