@@ -18,15 +18,15 @@ func New(cfg *lbConfig.Config, numVirtualNodes int) (*Router, error) {
 		return nil, fmt.Errorf("number of virtual nodes cannot be less than 1")
 	}
 
-	xdpProg := newXDP(cfg.Logger, cfg.Local.NetIfaceClients, cfg.Local.ClientsPort)
-	if err := xdpProg.loadProgram(); err != nil {
+	routerProg := newXDP(cfg.Logger, cfg.Local.NetIfaceClients, cfg.Local.ClientsPort)
+	if err := routerProg.loadProgram(); err != nil {
 		return nil, fmt.Errorf("failed to load XDP program: %w", err)
 	}
 
 	return &Router{
 		// todo(): add num virtual nodes to load balancer configuration
 		ring: newRing(Crc32Hasher, 5),
-		xdp:  xdpProg,
+		xdp:  routerProg,
 	}, nil
 }
 

@@ -19,17 +19,12 @@ const (
 const (
 	// LoadBalancerAddressArguments is the number of arguments expected for the load balancer address configuration
 	// so far we only use the ip and port
-	LoadBalancerAddressArguments = 2
-)
-
-var (
-	DefaultLoadBalancerAddresses = []Address{}
+	LoadBalancerAddressArguments = 3
 )
 
 type Config struct {
 	LoadBalancer LoadBalancer `mapstructure:"load_balancer"`
-
-	Logger *logrus.Logger
+	Logger       *logrus.Logger
 }
 
 // LoadBalancer contains the configuration for the remote lbs
@@ -39,14 +34,15 @@ type LoadBalancer struct {
 
 // Address represents an individual address entry in the TOML
 type Address struct {
-	IP   string `mapstructure:"ip"`
-	Port int    `mapstructure:"port"`
+	Hostname string `mapstructure:"hostname"`
+	IP       string `mapstructure:"ip"`
+	Port     int    `mapstructure:"port"`
 }
 
 func New() *Config {
 	return &Config{
 		LoadBalancer: LoadBalancer{
-			Addresses: DefaultLoadBalancerAddresses,
+			Addresses: []Address{},
 		},
 		Logger: logrus.New(),
 	}
@@ -70,11 +66,11 @@ func InitConfig(cmd *cobra.Command) *Config {
 }
 
 func AddConfigFlags(cmd *cobra.Command) {
-	cmd.Flags().StringArray(KeyLoadBalancerAddresses, []string{}, "Node seeds used to synchronize during startup")
 	cmd.Flags().String(common.KeyConfigFile, DefaultConfigFile, "config file (default is $PWD/config/lb.toml)")
+	cmd.Flags().StringArray(KeyLoadBalancerAddresses, []string{}, "Load balancer addresses")
 
-	_ = viper.BindPFlag(KeyLoadBalancerAddresses, cmd.Flags().Lookup(KeyLoadBalancerAddresses))
 	_ = viper.BindPFlag(common.KeyConfigFile, cmd.Flags().Lookup(common.KeyConfigFile))
+	_ = viper.BindPFlag(KeyLoadBalancerAddresses, cmd.Flags().Lookup(KeyLoadBalancerAddresses))
 }
 
 func ApplyFlagsToConfig(cmd *cobra.Command, cfg *Config) {
@@ -90,7 +86,6 @@ func ApplyFlagsToConfig(cmd *cobra.Command, cfg *Config) {
 
 func parseLBAddresses(addrsStr []string) ([]Address, error) {
 	var addrs []Address
-
 	for idx, addr := range addrsStr {
 		parts := strings.SplitN(addr, ":", LoadBalancerAddressArguments)
 		if len(parts) != LoadBalancerAddressArguments {
@@ -98,8 +93,9 @@ func parseLBAddresses(addrsStr []string) ([]Address, error) {
 		}
 
 		addrs = append(addrs, Address{
-			IP:   parts[0],
-			Port: viper.GetInt(parts[1]),
+			Hostname: parts[0],
+			IP:       parts[1],
+			Port:     viper.GetInt(parts[2]),
 		})
 	}
 

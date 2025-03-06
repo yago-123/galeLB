@@ -1,4 +1,6 @@
 [load_balancer]
+# endpoint that the load balancer will listen for incoming connections. Can define a hostname or an IP address
 addresses = [
-    { ip = "192.168.0.201", port = 7070 }
+    { hostname = "lb-0.local", ip = "",            port = 7070 },
+    { hostname = "",           ip = "192.168.1.2", port = 8080 }
 ]

@@ -18,15 +18,15 @@
   tags:
     - directory
 
-#- name: Clone the repository
-#  git:
-#    repo: "{{ repo_url }}"
-#    dest: "{{ app_dir }}"
-#    version: "{{ branch }}"
-#    force: yes
-#    update: yes
-#  tags:
-#    - git
+- name: Clone the repository
+  git:
+    repo: "{{ repo_url }}"
+    dest: "{{ app_dir }}"
+    version: "{{ branch }}"
+    force: yes
+    update: yes
+  tags:
+    - git
 
 - name: Download and install Go binary
   block:
@@ -183,7 +183,7 @@
 - name: Copy the configuration file
   copy:
     content: "{{ config_file_content }}"
-    dest: "{{ app_dir }}/config.yaml"
+    dest: "{{ app_dir }}/config.toml"
     mode: '0644'
 
 - name: Create logging directory
@@ -195,6 +195,7 @@
     - directory
 
 - name: Template systemd service file
+  become: true
   template:
     src: "templates/systemd-lb.service.j2"
     dest: "/etc/systemd/system/gale-lb.service"
@@ -204,11 +205,13 @@
   command: systemctl daemon-reload
 
 - name: Enable service
+  become: true
   systemd:
     name: "gale-lb"
     enabled: yes
 
 - name: Restart service
+  become: true
   systemd:
     name: "gale-lb"
     state: restarted

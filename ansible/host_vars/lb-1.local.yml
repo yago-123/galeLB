@@ -4,10 +4,12 @@ config_file_content: |
   node_port = 7070
   # port opened to listen for incoming connections from clients
   clients_port = 8080
+  # port opened to listen for incoming connections from other load balancers (synchronization)
+  load_balancer_port = 9090
   # interface used to communicate and re-route network packets to nodes
-  net_interface_nodes = "wlo1"
+  net_interface_nodes = "eth1"
   # interface used to retrieve and re-route network packets from clients 
-  net_interface_clients = "wlo1"
+  net_interface_clients = "eth1"
   
   [node_health]
   # number of continuous health checks that must be passed before being eligible for routing destination
@@ -30,8 +32,8 @@ config_file_content: |
   # be ignored
   enforce_single_configuration = false
   
-  #addresses = [
-  #    { ip = "192.168.1.1", port = 7070 },
-  #    { ip = "192.168.1.2", port = 8080 },
-  #    { ip = "192.168.1.3", port = 9090 }
-  #]
+  addresses = [
+      { ip = "192.168.1.1", port = 9090 },
+      { ip = "192.168.1.2", port = 9090 },
+      { ip = "192.168.1.3", port = 9090 }
+  ]

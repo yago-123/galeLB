@@ -3,8 +3,9 @@ Description=GaleLB load balancer service
 After=network.target
 
 [Service]
-ExecStart={{ app_dir }}/bin/gale-lb --config {{ app_dir }}/config.yaml
+ExecStart={{ app_dir }}/bin/gale-lb --config {{ app_dir }}/config.toml
 Restart=always
+LimitMEMLOCK=infinity
 StandardOutput=append:/var/log/gale-lb/service.log
 StandardError=append:/var/log/gale-lb/service.err.log
 
