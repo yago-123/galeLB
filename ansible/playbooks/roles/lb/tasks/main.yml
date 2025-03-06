@@ -1,79 +1,4 @@
 ---
-- name: Ensure apt is up to date and install necessary packages
-  apt:
-    update_cache: yes
-    name:
-      - make
-      - protobuf-compiler
-    state: present
-  tags:
-    - update
-    - packages
-
-- name: Create application directory
-  file:
-    path: "{{ app_dir }}"
-    state: directory
-    mode: '0755'
-  tags:
-    - directory
-
-- name: Clone the repository
-  git:
-    repo: "{{ repo_url }}"
-    dest: "{{ app_dir }}"
-    version: "{{ branch }}"
-    force: yes
-    update: yes
-  tags:
-    - git
-
-- name: Download and install Go binary
-  block:
-    - name: Check if Go is installed
-      stat:
-        path: "/usr/local/go/bin/go"
-      register: go_installed
-
-    - name: Download Go binary if not installed
-      get_url:
-        url: "https://go.dev/dl/go{{ go_version }}.linux-amd64.tar.gz"
-        dest: "/tmp/go{{ go_version }}.linux-amd64.tar.gz"
-      when: not go_installed.stat.exists
-
-    - name: Extract Go binary if not installed
-      unarchive:
-        src: "/tmp/go{{ go_version }}.linux-amd64.tar.gz"
-        dest: "/usr/local"
-        remote_src: yes
-      when: not go_installed.stat.exists
-  tags:
-    - go
-
-- name: Install Go tools
-  block:
-    - name: Check if protoc-gen-go is installed
-      shell: "which protoc-gen-go"
-      register: protoc_gen_go_installed
-      ignore_errors: yes
-
-    - name: Install protoc-gen-go tool if not installed
-      shell: "go install google.golang.org/protobuf/cmd/protoc-gen-go@latest"
-      when: protoc_gen_go_installed.rc != 0
-
-    - name: Check if protoc-gen-go-grpc is installed
-      shell: "which protoc-gen-go-grpc"
-      register: protoc_gen_go_grpc_installed
-      ignore_errors: yes
-
-    - name: Install protoc-gen-go-grpc tool if not installed
-      shell: "go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest"
-      when: protoc_gen_go_grpc_installed.rc != 0
-  environment:
-    PATH: "/usr/local/go/bin"
-  tags:
-    - go-tools
-
 - name: Install Clang 18 and llc if not present
   block:
     - name: Check if Clang is installed
@@ -158,6 +83,16 @@
     dest: /usr/include/linux
     state: link
   when: not linux_dir.stat.exists
+
+- name: Clone the repository
+  git:
+    repo: "{{ repo_url }}"
+    dest: "{{ app_dir }}"
+    version: "{{ branch }}"
+    force: yes
+    update: yes
+  tags:
+    - git
 
 - name: Check if {{ app_dir }}/pkg/routing/xdp_obj exists
   stat:

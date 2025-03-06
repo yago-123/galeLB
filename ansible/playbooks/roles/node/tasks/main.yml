@@ -1,23 +1,4 @@
 ---
-- name: Ensure apt is up to date and install necessary packages
-  apt:
-    update_cache: yes
-    name:
-      - make
-      - protobuf-compiler
-    state: present
-  tags:
-    - update
-    - packages
-
-- name: Create application directory
-  file:
-    path: "{{ app_dir }}"
-    state: directory
-    mode: '0755'
-  tags:
-    - directory
-
 - name: Clone the repository
   git:
     repo: "{{ repo_url }}"
@@ -28,32 +9,8 @@
   tags:
     - git
 
-- name: Download and install Go binary
-  block:
-    - name: Download Go binary
-      get_url:
-        url: "https://go.dev/dl/go{{ go_version }}.linux-amd64.tar.gz"
-        dest: "/tmp/go{{ go_version }}.linux-amd64.tar.gz"
-
-    - name: Extract Go binary
-      unarchive:
-        src: "/tmp/go{{ go_version }}.linux-amd64.tar.gz"
-        dest: "/usr/local"
-        remote_src: yes
-  tags:
-    - go
-
-- name: Install Go tools
-  shell: |
-    go install google.golang.org/protobuf/cmd/protoc-gen-go@latest && \
-    go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
-  environment:
-    PATH: "/usr/local/go/bin"
-  tags:
-    - go-tools
-
 - name: Build the application with make
-  shell: make {{ target }}
+  shell: make node
   args:
     chdir: "{{ app_dir }}"
   environment:
@@ -63,8 +20,8 @@
 
 - name: Copy the configuration file
   copy:
-    src: "{{ config }}"
-    dest: "{{ app_dir }}/config.yaml"
+    content: "{{ config_file_content }}"
+    dest: "{{ app_dir }}/config.toml"
     mode: '0644'
 
 - name: Create logging directory
@@ -76,6 +33,7 @@
     - directory
 
 - name: Template systemd service file
+  become: true
   template:
     src: "templates/systemd-node.service.j2"
     dest: "/etc/systemd/system/gale-node.service"
@@ -85,11 +43,14 @@
   command: systemctl daemon-reload
 
 - name: Enable service
+  become: true
   systemd:
     name: "gale-node"
     enabled: yes
 
 - name: Restart service
+  become: true
   systemd:
     name: "gale-node"
     state: restarted
+

@@ -10,4 +10,5 @@
     config: ../cmd/lb.toml
     go_version: '1.24.0'
   roles:
+    - dependencies
     - lb

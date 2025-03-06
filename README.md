@@ -108,8 +108,9 @@ $ ssh-add ~/.ssh/vagrant
 ```
 
 Create the vagrant machines with the network card connected to the LAN (for example `eth0` or `wlo1`):
-```bash 
-$ cd e2e && NETWORK_CARD=<net-card> SSH_KEY_PATH=~/.ssh/vagrant.pub vagrant up
+```bash
+$ cd e2e
+$ NETWORK_CARD=<net-card> SSH_KEY_PATH=~/.ssh/vagrant.pub vagrant up
 ```
 
 This will spawn 3 load balancer instances and 3 node instances. All machines install `avahi-daemon` package in order to 
