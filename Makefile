@@ -28,10 +28,10 @@ NODE_SOURCE := $(wildcard cmd/node/*.go)
 CONSENSUS_PROTOBUF_SOURCE := $(wildcard $(CONSENSUS_PROTOBUF_DIR)/*.proto)
 
 .PHONY: build 
-build: lb node
+build: xdp_router lb node
 
 .PHONY: lb
-lb: protobuf xdp_router
+lb: protobuf
 	@echo "building lb binary"
 	@go build $(GCFLAGS) -o $(OUTPUT_DIR)/$(LB_BINARY_NAME) $(LB_SOURCE)
 	@echo "lb binary ready at: $(OUTPUT_DIR)/$(LB_BINARY_NAME)"

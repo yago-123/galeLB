@@ -1,5 +1,4 @@
 *.pb.go
 .idea
 bin/*
-e2e/.vagrant/*
-pkg/routing/xdp_obj/*
+.vagrant/*

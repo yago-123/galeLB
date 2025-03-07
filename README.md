@@ -109,7 +109,6 @@ $ ssh-add ~/.ssh/vagrant
 
 Create the vagrant machines with the network card connected to the LAN (for example `eth0` or `wlo1`):
 ```bash
-$ cd e2e
 $ NETWORK_CARD=<net-card> SSH_KEY_PATH=~/.ssh/vagrant.pub vagrant up
 ```
 
@@ -124,9 +123,7 @@ $ ansible-playbook -i ansible/e2e-hosts.ini \
 
 
 
-
-
 Once you've finished testing the load balancer, you can destroy the machines:
 ```bash
-$ cd e2e && vagrant destroy -f
+$ vagrant destroy -f
 ```
