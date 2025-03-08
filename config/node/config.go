@@ -44,6 +44,7 @@ func New() *Config {
 		LoadBalancer: LoadBalancer{
 			Addresses: []Address{},
 		},
+		// todo(): add option for passing DNS resolver address
 		Logger: logrus.New(),
 	}
 }

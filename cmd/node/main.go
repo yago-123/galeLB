@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"net"
 	"time"
 
 	"github.com/yago-123/galelb/pkg/util"
@@ -15,13 +16,15 @@ import (
 )
 
 const (
-	GetConfigTimeout       = time.Second * 5
+	GetConfigTimeout       = 5 * time.Second
 	HostnameResolveTimeout = 5 * time.Second
 )
 
 var cfg *nodeConfig.Config
 
 func main() {
+	var err error
+
 	Execute(logrus.New())
 
 	cfg.Logger.SetLevel(logrus.DebugLevel)
@@ -33,20 +36,29 @@ func main() {
 			cfg.Logger.Fatalf("invalid address configuration, IP nor hostname is defined for index %d", idx)
 		}
 
-		// If the IP is not set, resolve the hostname
+		// If the IP is not set, resolve the hostname via multicast DNS or regular DNS
 		if address.IP == "" && address.Hostname != "" {
-			ctx, cancel := context.WithTimeout(context.Background(), HostnameResolveTimeout)
-			defer cancel()
+			ips := []net.IP{}
+			if util.IsMultiCastDNS(address.Hostname) {
+				ips, err = util.ResolveMulticastDNS(address.Hostname)
+				if err != nil {
+					cfg.Logger.Warnf("failed to resolve multicast DNS: %v", err)
+				}
+			} else if !util.IsMultiCastDNS(address.Hostname) {
+				ctx, cancel := context.WithTimeout(context.Background(), HostnameResolveTimeout)
+				defer cancel()
 
-			ip, err := util.ResolveHostname(ctx, address.Hostname)
-			if err != nil {
-				cfg.Logger.Fatalf("failed to resolve hostname from configuration %s: %w", address.Hostname, err)
+				ips, err = util.ResolveDNS(ctx, address.Hostname, "127.0.0.1:53")
+				if err != nil {
+					cfg.Logger.Fatalf("failed to resolve hostname from configuration %s: %v", address.Hostname, err)
+				}
 			}
 
-			// Update the address with the resolved IP. Notice this is not saved in the configuration file itself,
-			// this is a temporary change
-			// todo(): save this change in the configuration file
-			address.IP = ip
+			if len(ips) == 0 {
+				cfg.Logger.Fatalf("no IP addresses found for hostname: %s", address.Hostname)
+			}
+
+			address.IP = ips[0].String()
 		}
 
 		client, err := nodenetwork.NewClient(cfg.Logger, address.IP, address.Port)

@@ -121,8 +121,6 @@ $ ansible-playbook -i ansible/e2e-hosts.ini \
                       ansible/playbooks/node.yml
 ```
 
-
-
 Once you've finished testing the load balancer, you can destroy the machines:
 ```bash
 $ vagrant destroy -f
