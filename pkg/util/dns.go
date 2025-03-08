@@ -16,69 +16,39 @@ const (
 	DefaultMDNSAddress        = ":0"
 	DefaultMDNSTopLevelDomain = "local"
 
-	MDNSQueryTimeout = 2 * time.Second
+	MaxMDNSReadTimeout = 10 * time.Second
 )
 
 // ResolveMulticastDNS resolves a hostname using the multicast DNS protocol. Hostnames must be suffixed with ".local"
-func ResolveMulticastDNS(hostname string) ([]net.IP, error) {
-	localTopLevel := fmt.Sprintf(".%s", DefaultMDNSTopLevelDomain)
-	if !IsMultiCastDNS(hostname) {
-		return nil, fmt.Errorf("domains in mDNS must use .%s top level hostname", localTopLevel)
+func ResolveMulticastDNS(ctx context.Context, hostname string) ([]net.IP, error) {
+	// Validate and normalize hostname
+	host, err := normalizeMDNSHostname(hostname)
+	if err != nil {
+		return nil, err
 	}
 
-	host := strings.TrimSuffix(hostname, localTopLevel)
-
-	conn, err := net.ListenPacket(DefaultMDNSProtocol, DefaultMDNSAddress) // Bind to any available port
+	// Create an mDNS listener
+	conn, err := net.ListenPacket(DefaultMDNSProtocol, DefaultMDNSAddress)
 	if err != nil {
 		return nil, err
 	}
 	defer conn.Close()
 
+	// Resolve destination address
 	dst, err := net.ResolveUDPAddr(DefaultMDNSProtocol, DefaultMDNSResolver)
 	if err != nil {
 		return nil, err
 	}
 
-	query := []byte{
-		0x00, 0x00, // Transaction ID (0)
-		0x00, 0x00, // Flags
-		0x00, 0x01, // Questions: 1
-		0x00, 0x00, // Answer RRs: 0
-		0x00, 0x00, // Authority RRs: 0
-		0x00, 0x00, // Additional RRs: 0
-	}
+	// Construct the mDNS query
+	query := constructMDNSQuery(host)
 
-	// Append the hostname in mDNS format
-	for _, part := range append([]string{host}, DefaultMDNSTopLevelDomain) {
-		query = append(query, byte(len(part)))
-		query = append(query, []byte(part)...)
-	}
-	query = append(query, 0x00)       // Null terminator
-	query = append(query, 0x00, 0x01) // Type A
-	query = append(query, 0x00, 0x01) // Class IN
-
-	_, err = conn.WriteTo(query, dst)
-	if err != nil {
-		return nil, err
-	}
-
-	// Set read timeout
-	conn.SetReadDeadline(time.Now().Add(MDNSQueryTimeout))
-
-	buffer := make([]byte, 512)
-	n, _, err := conn.ReadFrom(buffer)
-	if err != nil {
-		return nil, err
-	}
-
-	// Extract IP address from response
-	if n < 12+16 {
-		return nil, fmt.Errorf("invalid mDNS response length %d", n)
-	}
-	ip := net.IPv4(buffer[n-4], buffer[n-3], buffer[n-2], buffer[n-1])
-	return []net.IP{ip}, nil
+	// Send the query and listen for a response
+	return sendAndReceiveMDNS(ctx, conn, dst, query)
 }
 
+// ResolveDNS resolves a hostname using the provided DNS server. If no DNS server is provided, it uses the default
+// CloudFlare DNS
 func ResolveDNS(ctx context.Context, hostname string, dnsServer ...string) ([]net.IP, error) {
 	// Resolve with the provided DNS server if any, otherwise, use the default CloudFlare DNS
 	defaultResolver := dnsServer
@@ -98,6 +68,83 @@ func ResolveDNS(ctx context.Context, hostname string, dnsServer ...string) ([]ne
 
 func IsMultiCastDNS(hostname string) bool {
 	return strings.HasSuffix(hostname, fmt.Sprintf(".%s", DefaultMDNSTopLevelDomain))
+}
+
+// normalizeMDNSHostname ensures that the hostname is in the correct format for mDNS resolution
+func normalizeMDNSHostname(hostname string) (string, error) {
+	localTopLevel := fmt.Sprintf(".%s", DefaultMDNSTopLevelDomain)
+	if !IsMultiCastDNS(hostname) {
+		return "", fmt.Errorf("domains in mDNS must use .%s top level hostname", localTopLevel)
+	}
+	return strings.TrimSuffix(hostname, localTopLevel), nil
+}
+
+// constructMDNSQuery creates an mDNS query for the given hostname
+func constructMDNSQuery(host string) []byte {
+	query := []byte{
+		0x00, 0x00, // Transaction ID (0)
+		0x00, 0x00, // Flags
+		0x00, 0x01, // Questions: 1
+		0x00, 0x00, // Answer RRs: 0
+		0x00, 0x00, // Authority RRs: 0
+		0x00, 0x00, // Additional RRs: 0
+	}
+
+	// Append the hostname in mDNS format
+	for _, part := range append([]string{host}, DefaultMDNSTopLevelDomain) {
+		query = append(query, byte(len(part)))
+		query = append(query, []byte(part)...)
+	}
+	query = append(query, 0x00)       // Null terminator
+	query = append(query, 0x00, 0x01) // Type A
+	query = append(query, 0x00, 0x01) // Class IN
+
+	return query
+}
+
+// sendAndReceiveMDNS sends an mDNS query and waits for a response
+func sendAndReceiveMDNS(ctx context.Context, conn net.PacketConn, dst *net.UDPAddr, query []byte) ([]net.IP, error) {
+	errChan := make(chan error, 1)
+	respChan := make(chan []net.IP, 1)
+	defer close(errChan)
+	defer close(respChan)
+
+	// Send query
+	go func() {
+		_, err := conn.WriteTo(query, dst)
+		if err != nil {
+			errChan <- err
+		}
+	}()
+
+	// Set read timeout
+	conn.SetReadDeadline(time.Now().Add(MaxMDNSReadTimeout))
+
+	// Listen for response
+	go func() {
+		buffer := make([]byte, 512)
+		n, _, err := conn.ReadFrom(buffer)
+		if err != nil {
+			errChan <- err
+			return
+		}
+		if n < 12+16 {
+			errChan <- fmt.Errorf("invalid mDNS response length %d", n)
+			return
+		}
+		ip := net.IPv4(buffer[n-4], buffer[n-3], buffer[n-2], buffer[n-1])
+		respChan <- []net.IP{ip}
+	}()
+
+	// Wait for response, error, or context cancellation
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case err := <-errChan:
+		return nil, err
+	case ip := <-respChan:
+		return ip, nil
+	}
 }
 
 func resolveDNS(ctx context.Context, hostname, dnsServer string) ([]net.IP, error) {
