@@ -50,7 +50,7 @@ func Ping(ctx context.Context, address string) error {
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
-	case err := <-errChan:
+	case err = <-errChan:
 		if err != nil {
 			return err
 		}
@@ -59,9 +59,9 @@ func Ping(ctx context.Context, address string) error {
 	// Wait for the reply
 	go func() {
 		errChan <- func() error {
-			parsedMsg, err := receiveICMPEchoReply(conn)
-			if err != nil {
-				return err
+			parsedMsg, errReply := receiveICMPEchoReply(conn)
+			if errReply != nil {
+				return errReply
 			}
 
 			if parsedMsg.Type == ipv4.ICMPTypeEchoReply {
@@ -74,7 +74,7 @@ func Ping(ctx context.Context, address string) error {
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
-	case err := <-errChan:
+	case err = <-errChan:
 		return err
 	}
 }

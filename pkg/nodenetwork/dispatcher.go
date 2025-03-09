@@ -11,7 +11,8 @@ import (
 )
 
 const (
-	GetConfigTimeout = 5 * time.Second
+	GetConfigTimeout           = 5 * time.Second
+	HealthCheckIntervalDivisor = 2
 )
 
 type Target struct {
@@ -61,8 +62,8 @@ func (d *Dispatcher) Start() {
 		}
 
 		// todo(): define better times and intervals
-		normalizedTime := time.Duration(executionCfg.HealthCheckTimeout) * time.Nanosecond
-		healthPeriod := normalizedTime / 2
+		normalizedTime := time.Duration(executionCfg.GetHealthCheckTimeout()) * time.Nanosecond
+		healthPeriod := normalizedTime / HealthCheckIntervalDivisor
 
 		// todo(): add a way to stop the dispatcher
 		// Increase work group to wait for the health status goroutine and spawn health check reporter
@@ -93,8 +94,6 @@ func (d *Dispatcher) Start() {
 
 	// Wait for all goroutines to finish
 	wg.Wait()
-
-	return
 }
 
 func (d *Dispatcher) Stop() {

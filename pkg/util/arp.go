@@ -54,26 +54,26 @@ func GetMACViaARPCall(ip string, ifaceName string) (string, error) {
 	// Get the network interface by name
 	iface, err := net.InterfaceByName(ifaceName)
 	if err != nil {
-		return "", fmt.Errorf("interface not found: %v", err)
+		return "", fmt.Errorf("interface not found: %w", err)
 	}
 
 	// Open a connection to the ARP protocol for the given interface
 	conn, err := arp.Dial(iface)
 	if err != nil {
-		return "", fmt.Errorf("failed to open ARP connection: %v", err)
+		return "", fmt.Errorf("failed to open ARP connection: %w", err)
 	}
 	defer conn.Close()
 
 	// Parse the IP address we want to resolve to get MAC address
 	targetIP, err := netip.ParseAddr(ip)
 	if err != nil {
-		return "", fmt.Errorf("invalid IP address format: %v", err)
+		return "", fmt.Errorf("invalid IP address format: %w", err)
 	}
 
 	// Send the ARP request and wait for the MAC address in response
 	mac, err := conn.Resolve(targetIP)
 	if err != nil {
-		return "", fmt.Errorf("failed to resolve MAC address for IP %s: %v", ip, err)
+		return "", fmt.Errorf("failed to resolve MAC address for IP %s: %w", ip, err)
 	}
 
 	return mac.String(), nil

@@ -55,9 +55,9 @@ func NewNodeManager(cfg *lbConfig.Config, registry *registry.NodeRegistry) *Node
 }
 
 // GetConfig returns the current configuration of the load balancer so that nodes can adjust their parameters accordingly
-func (s *NodeManager) GetConfig(ctx context.Context, _ *emptypb.Empty) (*v1Consensus.ConfigResponse, error) {
+func (s *NodeManager) GetConfig(_ context.Context, _ *emptypb.Empty) (*v1Consensus.ConfigResponse, error) {
 	return &v1Consensus.ConfigResponse{
-		ChecksBeforeRouting: uint32(s.cfg.NodeHealth.ChecksBeforeRouting),
+		ChecksBeforeRouting: uint32(s.cfg.NodeHealth.ChecksBeforeRouting), //nolint:gosec // secure to do this uint conversion
 		HealthCheckTimeout:  s.cfg.NodeHealth.ChecksTimeout.Nanoseconds(),
 		BlackListAfterFails: int64(s.cfg.NodeHealth.BlackListAfterFails),
 		BlackListExpiry:     s.cfg.NodeHealth.BlackListExpiry.Nanoseconds(),
@@ -140,9 +140,10 @@ func (s *NodeManager) multiplexHealthStatus(nodeKey string, msgChan chan *v1Cons
 	for {
 		select {
 		case msg := <-msgChan:
-			if msg.Status == uint32(v1Consensus.NotServing) {
+			if msg.GetStatus() == uint32(v1Consensus.NotServing) {
 				// todo(): think what to do, we must re-route traffic for sure
-			} else if msg.Status == uint32(v1Consensus.ShuttingDown) {
+				continue
+			} else if msg.GetStatus() == uint32(v1Consensus.ShuttingDown) {
 				// todo(): invoke quorum and re-route all traffic to other nodes
 				s.logger.Infof("node %s is shutting down", nodeKey)
 				return nil // todo(): change this return
@@ -188,7 +189,7 @@ func gRPCErrUnrecoverable(err error) bool {
 func extractTCPFromConn(stream grpc.BidiStreamingServer[v1Consensus.HealthStatus, v1Consensus.HealthStatus]) (net.TCPAddr, error) {
 	p, ok := peer.FromContext(stream.Context())
 	if ok {
-		if addr, okTcp := p.Addr.(*net.TCPAddr); okTcp {
+		if addr, okTCP := p.Addr.(*net.TCPAddr); okTCP {
 			// Make sure that addr is not nil just in case, it should never be nil
 			if addr != nil {
 				return *addr, nil

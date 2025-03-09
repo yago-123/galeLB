@@ -81,9 +81,9 @@ func (r *xdp) loadProgram() error {
 	return nil
 }
 
-func (r *xdp) unloadProgram() error {
-	return nil
-}
+// func (r *xdp) unloadProgram() error {
+// 	return nil
+// }
 
 func getInterfaceIndex(netInterface string) (int, error) {
 	iface, err := net.InterfaceByName(netInterface)

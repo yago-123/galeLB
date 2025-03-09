@@ -38,10 +38,10 @@ func main() {
 	dispatcher := nodeNet.NewDispatcher(cfg, targets)
 
 	// Create API for querying the node
-	nodeApi := nodeAPIV1.New(cfg, dispatcher)
+	nodeAPI := nodeAPIV1.New(cfg, dispatcher)
 
-	nodeApi.Start()
-	defer nodeApi.Stop()
+	nodeAPI.Start()
+	defer nodeAPI.Stop()
 
 	dispatcher.Start()
 	defer dispatcher.Stop()
@@ -52,7 +52,6 @@ func main() {
 // retrieveIPAndPorts retrieves the IP addresses and ports from the configuration file and returns a map of targets. It
 // also does basic checking and hostname resolution if the IP is not set.
 func retrieveIPAndPorts(cfg *nodeConfig.Config) (map[string]nodeNet.Target, error) {
-	var err error
 	targets := make(map[string]nodeNet.Target)
 
 	for idx, address := range cfg.LoadBalancer.Addresses {
@@ -66,23 +65,13 @@ func retrieveIPAndPorts(cfg *nodeConfig.Config) (map[string]nodeNet.Target, erro
 
 		// If the IP is not set, resolve the hostname via multicast DNS or regular DNS
 		if address.IP == "" && address.Hostname != "" {
-			ips := []net.IP{}
-
 			ctx, cancel := context.WithTimeout(context.Background(), HostnameResolveTimeout)
 			defer cancel()
 
-			if util.IsMultiCastDNS(address.Hostname) {
-				ips, err = util.ResolveMulticastDNS(ctx, address.Hostname)
-				if err != nil {
-					return nil, fmt.Errorf("failed to resolve multicast DNS %s: %v", address.Hostname, err)
-				}
-			} else if !util.IsMultiCastDNS(address.Hostname) {
-				ips, err = util.ResolveDNS(ctx, address.Hostname, "127.0.0.1:53")
-				if err != nil {
-					return nil, fmt.Errorf("failed to resolve hostname from configuration %s: %v", address.Hostname, err)
-				}
+			ips, err := resolveHostname(ctx, address.Hostname)
+			if err != nil {
+				return nil, fmt.Errorf("failed to resolve hostname %s: %w", address.Hostname, err)
 			}
-
 			if len(ips) == 0 {
 				return nil, fmt.Errorf("no IP addresses found for hostname: %s", address.Hostname)
 			}
@@ -102,4 +91,24 @@ func retrieveIPAndPorts(cfg *nodeConfig.Config) (map[string]nodeNet.Target, erro
 	}
 
 	return targets, nil
+}
+
+func resolveHostname(ctx context.Context, host string) ([]net.IP, error) {
+	var err error
+	ips := []net.IP{}
+
+	if util.IsMultiCastDNS(host) {
+		ips, err = util.ResolveMulticastDNS(ctx, host)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve multicast DNS %s: %w", host, err)
+		}
+	} else if !util.IsMultiCastDNS(host) {
+		// todo(): modify this to use the DNS server from the configuration
+		ips, err = util.ResolveDNS(ctx, host, "127.0.0.1:53")
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve hostname from configuration %s: %w", host, err)
+		}
+	}
+
+	return ips, nil
 }

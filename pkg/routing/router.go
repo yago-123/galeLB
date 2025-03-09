@@ -25,12 +25,12 @@ func New(cfg *lbConfig.Config, numVirtualNodes int) (*Router, error) {
 
 	return &Router{
 		// todo(): add num virtual nodes to load balancer configuration
-		ring: newRing(Crc32Hasher, 5),
+		ring: newRing(Crc32Hasher, numVirtualNodes),
 		xdp:  routerProg,
 	}, nil
 }
 
-func (r *Router) AddNode(nodeKey common.AddrKey, ip string, port int) {
+func (r *Router) AddNode(nodeKey common.AddrKey) {
 	r.ring.addNode(nodeKey)
 }
 

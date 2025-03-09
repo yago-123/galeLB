@@ -1,14 +1,12 @@
 package main
 
 import (
-	"github.com/yago-123/galelb/pkg/common"
 	lbAPIV1 "github.com/yago-123/galelb/pkg/lbnetwork/api/v1"
 	"github.com/yago-123/galelb/pkg/lbnetwork/nodemanager"
 	"github.com/yago-123/galelb/pkg/registry"
 
 	"github.com/sirupsen/logrus"
 	lbConfig "github.com/yago-123/galelb/config/lb"
-	"github.com/yago-123/galelb/pkg/routing"
 )
 
 var cfg *lbConfig.Config
@@ -22,27 +20,27 @@ func main() {
 	cfg.Logger.Infof("starting load balancer with config: %v", cfg)
 
 	// Create routing mechanism with consistent hashing (5 virtual nodes per real node)
-	router, err := routing.New(cfg, 5)
-	if err != nil {
-		cfg.Logger.Fatalf("failed to create router: %s", err)
-	}
+	// router, err := routing.New(cfg, 5)
+	// if err != nil {
+	// 	cfg.Logger.Fatalf("failed to create router: %s", err)
+	// }
 
 	// Create registry for managing nodes
 	nodeRegistry := registry.New(cfg.Logger)
 
 	// Create API for querying load balancer
-	lbApi := lbAPIV1.New(cfg, nodeRegistry)
+	lbAPI := lbAPIV1.New(cfg, nodeRegistry)
 
 	// Create gRPC server for managing nodes
 	server := nodemanager.New(cfg, nodeRegistry)
 	server.Start()
 
 	// Start the load balancer API
-	lbApi.Start()
-	defer lbApi.Stop()
+	lbAPI.Start()
+	defer lbAPI.Stop()
 
 	// Add some nodes
-	router.AddNode(common.AddrKey{}, "192.168.1.2", 9091)
+	// router.AddNode(common.AddrKey{}, "192.168.1.2", 9091)
 	// router.AddNode(common.AddrKey{}, "192.168.1.3", 9091)
 	// router.AddNode(common.AddrKey{}, "192.168.1.4", 9091)
 

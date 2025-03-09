@@ -40,7 +40,7 @@ func (ch *ring) addNode(node common.AddrKey) {
 	// todo(): make sure that does not overflow the ring nor the nodes map
 
 	// Hash the virtual node and persist into the ring
-	for i := 0; i < ch.numVirtualNodes; i++ {
+	for i := range ch.numVirtualNodes {
 		virtualNode := fmt.Sprintf("%s-%d", addrToString(node), i)
 		hash := ch.hasher([]byte(virtualNode))
 
@@ -57,7 +57,7 @@ func (ch *ring) removeNode(node common.AddrKey) {
 	defer ch.lock.Unlock()
 
 	// Remove the virtual nodes from the map
-	for i := 0; i < ch.numVirtualNodes; i++ {
+	for i := range ch.numVirtualNodes {
 		virtualNode := fmt.Sprintf("%s-%d", addrToString(node), i)
 		hash := ch.hasher([]byte(virtualNode))
 		delete(ch.nodes, hash)
