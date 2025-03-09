@@ -2,11 +2,12 @@ package nodemanager
 
 import (
 	"fmt"
-	"github.com/yago-123/galelb/pkg/registry"
 	"log"
 	"math"
 	"net"
 	"time"
+
+	"github.com/yago-123/galelb/pkg/registry"
 
 	lbConfig "github.com/yago-123/galelb/config/lb"
 

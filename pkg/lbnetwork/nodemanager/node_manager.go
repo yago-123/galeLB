@@ -3,9 +3,10 @@ package nodemanager
 import (
 	"context"
 	"fmt"
-	"github.com/yago-123/galelb/pkg/registry"
 	"net"
 	"time"
+
+	"github.com/yago-123/galelb/pkg/registry"
 
 	"github.com/yago-123/galelb/pkg/util"
 

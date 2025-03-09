@@ -3,9 +3,10 @@ package util
 import (
 	"context"
 	"fmt"
+	"net"
+
 	"golang.org/x/net/icmp"
 	"golang.org/x/net/ipv4"
-	"net"
 )
 
 const (

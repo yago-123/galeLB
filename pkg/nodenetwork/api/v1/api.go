@@ -13,8 +13,8 @@ type NodeNetworkAPI struct {
 
 func New(cfg *nodeConfig.Config, dispatcher *nodeNet.Dispatcher) *NodeNetworkAPI {
 	return &NodeNetworkAPI{
-		dispatcher: dispatcher,
 		cfg:        cfg,
+		dispatcher: dispatcher,
 	}
 }
 
@@ -25,3 +25,5 @@ func (n *NodeNetworkAPI) Start() {
 func (n *NodeNetworkAPI) Stop() {
 
 }
+
+// add router with options for starting / stopping dispatcher

@@ -25,3 +25,5 @@ func (l *LoadBalancerAPI) Start() {
 func (l *LoadBalancerAPI) Stop() {
 
 }
+
+// add router with options for retrieving the current registry of nodes
