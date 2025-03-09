@@ -3,6 +3,7 @@ package nodemanager
 import (
 	"context"
 	"fmt"
+	"github.com/yago-123/galelb/pkg/registry"
 	"net"
 	"time"
 
@@ -27,19 +28,14 @@ const (
 	ChannelBufferSize = 1
 )
 
-type node struct {
-	continuousHealthChecks uint
-	lastHealthCheck        time.Time
-}
-
-// nodeManager contains the logic for synchronizing the load balancer with the nodeRegistry. It's structured as a reverse
-// console, allowing nodeRegistry to connect to the server as soon as they start in order to be registered and allocated
+// NodeManager contains the logic for synchronizing the load balancer with the NodeRegistry. It's structured as a reverse
+// console, allowing NodeRegistry to connect to the server as soon as they start in order to be registered and allocated
 // traffic
-type nodeManager struct {
+type NodeManager struct {
 	cfg *lbConfig.Config
 
 	// registry is the internal structure that keeps track of the nodes and their health status
-	registry *nodeRegistry
+	registry *registry.NodeRegistry
 
 	//
 
@@ -49,16 +45,16 @@ type nodeManager struct {
 	logger *logrus.Logger
 }
 
-func newNodeManager(cfg *lbConfig.Config) *nodeManager {
-	return &nodeManager{
+func NewNodeManager(cfg *lbConfig.Config, registry *registry.NodeRegistry) *NodeManager {
+	return &NodeManager{
 		cfg:      cfg,
-		registry: newNodeRegistry(cfg.Logger),
+		registry: registry,
 		logger:   cfg.Logger,
 	}
 }
 
 // GetConfig returns the current configuration of the load balancer so that nodes can adjust their parameters accordingly
-func (s *nodeManager) GetConfig(ctx context.Context, _ *emptypb.Empty) (*v1Consensus.ConfigResponse, error) {
+func (s *NodeManager) GetConfig(ctx context.Context, _ *emptypb.Empty) (*v1Consensus.ConfigResponse, error) {
 	return &v1Consensus.ConfigResponse{
 		ChecksBeforeRouting: uint32(s.cfg.NodeHealth.ChecksBeforeRouting),
 		HealthCheckTimeout:  s.cfg.NodeHealth.ChecksTimeout.Nanoseconds(),
@@ -69,7 +65,7 @@ func (s *nodeManager) GetConfig(ctx context.Context, _ *emptypb.Empty) (*v1Conse
 
 // ReportHealthStatus is the main loop for listening to health checks from nodes. Nodes send health checks periodically to the
 // LB to indicate their presence. If a node does not send a health check within a certain timeout, it is removed.
-func (s *nodeManager) ReportHealthStatus(stream grpc.BidiStreamingServer[v1Consensus.HealthStatus, v1Consensus.HealthStatus]) error {
+func (s *NodeManager) ReportHealthStatus(stream grpc.BidiStreamingServer[v1Consensus.HealthStatus, v1Consensus.HealthStatus]) error {
 	msgChan := make(chan *v1Consensus.HealthStatus, ChannelBufferSize)
 	errChan := make(chan error, ChannelBufferSize)
 
@@ -98,7 +94,7 @@ func (s *nodeManager) ReportHealthStatus(stream grpc.BidiStreamingServer[v1Conse
 	nodeKey := tcpAddr.String()
 
 	// Register the node if it is not already present
-	s.registry.registerNode(nodeKey)
+	s.registry.RegisterNode(nodeKey)
 
 	s.logger.Debugf("registered new connection from node %s with mac %s", nodeKey, mac)
 
@@ -112,7 +108,7 @@ func (s *nodeManager) ReportHealthStatus(stream grpc.BidiStreamingServer[v1Conse
 
 // listenerReportHealthStatus is a helper function for listening to health checks from nodes. It abstracts the listener
 // logic from the main function to make the code more readable
-func (s *nodeManager) listenerReportHealthStatus(nodeKey string, msgChan chan *v1Consensus.HealthStatus, errChan chan error, stream grpc.BidiStreamingServer[v1Consensus.HealthStatus, v1Consensus.HealthStatus]) {
+func (s *NodeManager) listenerReportHealthStatus(nodeKey string, msgChan chan *v1Consensus.HealthStatus, errChan chan error, stream grpc.BidiStreamingServer[v1Consensus.HealthStatus, v1Consensus.HealthStatus]) {
 	for {
 		// Wait for new updates from the node
 		req, errRecv := stream.Recv()
@@ -135,7 +131,7 @@ func (s *nodeManager) listenerReportHealthStatus(nodeKey string, msgChan chan *v
 // multiplexHealthStatus is in charge of multiplexing health status updates from nodes. It listens for health status
 // updates and errors from the node. If a node does not send a health check within a certain timeout, it is marked as
 // unhealthy and the traffic is rerouted to other nodes
-func (s *nodeManager) multiplexHealthStatus(nodeKey string, msgChan chan *v1Consensus.HealthStatus, errChan chan error) error {
+func (s *NodeManager) multiplexHealthStatus(nodeKey string, msgChan chan *v1Consensus.HealthStatus, errChan chan error) error {
 	// Set timeout for health checks. Nodes should send health checks at least once every half of this duration
 	timer := time.NewTimer(s.cfg.NodeHealth.ChecksTimeout)
 	defer timer.Stop()
@@ -152,7 +148,7 @@ func (s *nodeManager) multiplexHealthStatus(nodeKey string, msgChan chan *v1Cons
 			}
 
 			// If status is v1Consensus.Serving keep running the loop
-			s.registry.reportNewHealthCheck(nodeKey)
+			s.registry.ReportNewHealthCheck(nodeKey)
 
 			// Drain and reset the timer
 			if !timer.Stop() {
@@ -163,7 +159,7 @@ func (s *nodeManager) multiplexHealthStatus(nodeKey string, msgChan chan *v1Cons
 		case err := <-errChan:
 			s.logger.Errorf("error receiving health status: %v", err)
 			if gRPCErrUnrecoverable(err) {
-				s.registry.reportNodeFailure(nodeKey)
+				s.registry.ReportNodeFailure(nodeKey)
 				// todo(): trigger action for start rerouting traffic
 				// todo(): do we really want to register/unregister or just keep a latest timestamp? s.unregisterNode(nodeKey)
 				return fmt.Errorf("unrecoverable error receiving health status: %w", err)
@@ -172,7 +168,7 @@ func (s *nodeManager) multiplexHealthStatus(nodeKey string, msgChan chan *v1Cons
 			// Do not drain the timer, as we want to stop tracking this node if it does not send health status
 			// todo(): may be worth to send (timeout/2) - 1?
 		case <-timer.C:
-			s.registry.reportNodeFailure(nodeKey)
+			s.registry.ReportNodeFailure(nodeKey)
 			// todo(): trigger action for start rerouting traffic
 			// todo(): do we really want to register/unregister or just keep a latest timestamp? s.unregisterNode(nodeKey) s.unregisterNode(nodeKey)
 			return fmt.Errorf("timed out waiting for health status from %s", nodeKey)

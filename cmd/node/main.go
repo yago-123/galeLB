@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	nodeAPIV1 "github.com/yago-123/galelb/pkg/nodenetwork/api/v1"
 	"net"
 	"sync"
 	"time"
@@ -11,7 +12,7 @@ import (
 	v1Consensus "github.com/yago-123/galelb/pkg/consensus/v1"
 
 	nodeConfig "github.com/yago-123/galelb/config/node"
-	"github.com/yago-123/galelb/pkg/nodenetwork"
+	nodeNet "github.com/yago-123/galelb/pkg/nodenetwork"
 
 	"github.com/sirupsen/logrus"
 )
@@ -32,6 +33,13 @@ func main() {
 	cfg.Logger.SetLevel(logrus.DebugLevel)
 
 	cfg.Logger.Infof("starting node with config: %v", cfg)
+
+	dispatcher := nodeNet.NewDispatcher()
+
+	nodeAPIV1.New(cfg, dispatcher)
+
+	dispatcher.Start()
+	defer dispatcher.Stop()
 
 	for idx, address := range cfg.LoadBalancer.Addresses {
 		if address.IP == "" && address.Hostname == "" {
@@ -66,7 +74,7 @@ func main() {
 			address.IP = ips[0].String()
 		}
 
-		client, err := nodenetwork.NewClient(cfg.Logger, address.IP, address.Port)
+		client, err := nodeNet.NewClient(cfg.Logger, address.IP, address.Port)
 		if err != nil {
 			cfg.Logger.Fatalf("failed to create client: %v", err)
 		}

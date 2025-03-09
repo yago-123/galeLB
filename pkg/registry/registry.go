@@ -1,4 +1,4 @@
-package nodemanager
+package registry
 
 import (
 	"sync"
@@ -7,7 +7,13 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type nodeRegistry struct {
+type node struct {
+	continuousHealthChecks uint
+	lastHealthCheck        time.Time
+}
+
+// NodeRegistry is a struct that keeps track of all nodes that are connected to the load balancer
+type NodeRegistry struct {
 	// registry is used to keep track of all nodes that are connected to the load balancer. This is used to keep
 	// track of nodes to which we should route traffic.
 	registry map[string]*node
@@ -25,16 +31,16 @@ type nodeRegistry struct {
 	logger *logrus.Logger
 }
 
-func newNodeRegistry(logger *logrus.Logger) *nodeRegistry {
-	return &nodeRegistry{
+func New(logger *logrus.Logger) *NodeRegistry {
+	return &NodeRegistry{
 		registry:  map[string]*node{},
 		blackList: map[string]time.Time{},
 		logger:    logger,
 	}
 }
 
-// registerNode adds a node to the registry
-func (n *nodeRegistry) registerNode(nodeKey string) {
+// RegisterNode adds a node to the registry
+func (n *NodeRegistry) RegisterNode(nodeKey string) {
 	n.globalLock.Lock()
 	defer n.globalLock.Unlock()
 
@@ -43,8 +49,8 @@ func (n *nodeRegistry) registerNode(nodeKey string) {
 	}
 }
 
-// reportNewHealthCheck updates the last health check time for a node. Updates info such as todo()
-func (n *nodeRegistry) reportNewHealthCheck(nodeKey string) {
+// ReportNewHealthCheck updates the last health check time for a node. Updates info such as todo()
+func (n *NodeRegistry) ReportNewHealthCheck(nodeKey string) {
 	n.globalLock.Lock()
 	defer n.globalLock.Unlock()
 
@@ -59,7 +65,7 @@ func (n *nodeRegistry) reportNewHealthCheck(nodeKey string) {
 	nodeInfo.continuousHealthChecks++
 }
 
-func (n *nodeRegistry) reportNodeFailure(nodeKey string) {
+func (n *NodeRegistry) ReportNodeFailure(nodeKey string) {
 	n.globalLock.Lock()
 	defer n.globalLock.Unlock()
 

@@ -2,6 +2,7 @@ package nodemanager
 
 import (
 	"fmt"
+	"github.com/yago-123/galelb/pkg/registry"
 	"log"
 	"math"
 	"net"
@@ -32,7 +33,7 @@ type Server struct {
 	cfg *lbConfig.Config
 }
 
-func New(cfg *lbConfig.Config) *Server {
+func New(cfg *lbConfig.Config, registry *registry.NodeRegistry) *Server {
 	grpcServer := grpc.NewServer(
 		grpc.MaxRecvMsgSize(MaxRecvMsgSize),
 		grpc.MaxSendMsgSize(MaxSendMsgSize),
@@ -48,7 +49,7 @@ func New(cfg *lbConfig.Config) *Server {
 		// grpc.StreamInterceptor(),                // todo
 	)
 
-	pb.RegisterLBNodeManagerServer(grpcServer, newNodeManager(cfg))
+	pb.RegisterLBNodeManagerServer(grpcServer, NewNodeManager(cfg, registry))
 
 	// todo() remove once the project has been stabilized
 	reflection.Register(grpcServer)

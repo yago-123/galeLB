@@ -2,7 +2,9 @@ package main
 
 import (
 	"github.com/yago-123/galelb/pkg/common"
+	lbAPIV1 "github.com/yago-123/galelb/pkg/lbnetwork/api/v1"
 	"github.com/yago-123/galelb/pkg/lbnetwork/nodemanager"
+	"github.com/yago-123/galelb/pkg/registry"
 
 	"github.com/sirupsen/logrus"
 	lbConfig "github.com/yago-123/galelb/config/lb"
@@ -25,14 +27,24 @@ func main() {
 		cfg.Logger.Fatalf("failed to create router: %s", err)
 	}
 
+	// Create registry for managing nodes
+	nodeRegistry := registry.New(cfg.Logger)
+
+	// Create API for querying load balancer
+	lbApi := lbAPIV1.New(cfg, nodeRegistry)
+
 	// Create gRPC server for managing nodes
-	server := nodemanager.New(cfg)
+	server := nodemanager.New(cfg, nodeRegistry)
 	server.Start()
+
+	// Start the load balancer API
+	lbApi.Start()
+	defer lbApi.Stop()
 
 	// Add some nodes
 	router.AddNode(common.AddrKey{}, "192.168.1.2", 9091)
-	router.AddNode(common.AddrKey{}, "192.168.1.3", 9091)
-	router.AddNode(common.AddrKey{}, "192.168.1.4", 9091)
+	// router.AddNode(common.AddrKey{}, "192.168.1.3", 9091)
+	// router.AddNode(common.AddrKey{}, "192.168.1.4", 9091)
 
 	// Hash the IP of a request
 	// for i := 0; i < 15; i++ {

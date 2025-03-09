@@ -1,4 +1,4 @@
-# GaleLB: multi-node L4 load balancer
+# GaleLB: multi-node fault-tolerant load balancer
 
 Supports: 
 - [ ] L2-Based Forwarding (Stateless MAC Bridging in `XDP`)
@@ -96,6 +96,12 @@ $ go install google.golang.org/grpc/cmd/protoc-gen-go-grpc
 ```
 
 # Running e2e tests 
+## Requirements
+* Vagrant    2.4.3
+* Ansible    2.16.3
+* VirtualBox 7.1.0
+
+## Setting up the environment
 Create a new key pair of SSH keys for the vagrant machines:
 ```bash
 $ ssh-keygen -t ed25519  -f ~/.ssh/vagrant -N ""
@@ -119,6 +125,12 @@ $ ansible-playbook -i ansible/e2e-hosts.ini \
                       ansible/playbooks/lb.yml
 $ ansible-playbook -i ansible/e2e-hosts.ini \
                       ansible/playbooks/node.yml
+```
+
+## Running the e2e tests
+Run the e2e tests:
+```bash
+$ sudo go test ./e2e -parallel 1
 ```
 
 Once you've finished testing the load balancer, you can destroy the machines:
