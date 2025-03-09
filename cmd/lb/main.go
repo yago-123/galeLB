@@ -36,7 +36,12 @@ func main() {
 	server.Start()
 
 	// Start the load balancer API
-	lbAPI.Start()
+	go func() {
+		errAPI := lbAPI.Start()
+		if errAPI != nil {
+			cfg.Logger.Errorf("failed to start load balancer API: %v", errAPI)
+		}
+	}()
 	defer lbAPI.Stop()
 
 	// Add some nodes

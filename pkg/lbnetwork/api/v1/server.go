@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	nodeConfig "github.com/yago-123/galelb/config/node"
-	nodeNet "github.com/yago-123/galelb/pkg/nodenetwork"
+	"github.com/yago-123/galelb/config/lb"
+	"github.com/yago-123/galelb/pkg/registry"
 )
 
 const (
@@ -20,29 +20,30 @@ const (
 	ServerShutdownTimeout = 5 * time.Second
 )
 
-type NodeNetworkAPI struct {
+type LoadBalancerAPI struct {
 	server *http.Server
 
-	cfg *nodeConfig.Config
+	cfg *lb.Config
 }
 
-func New(cfg *nodeConfig.Config, dispatcher *nodeNet.Dispatcher) *NodeNetworkAPI {
+func New(cfg *lb.Config, registry *registry.NodeRegistry) *LoadBalancerAPI {
 	server := &http.Server{
 		Addr:           ":5555", // todo(): replace with cfg
-		Handler:        setupRouter(dispatcher),
+		Handler:        setupRouter(registry),
 		ReadTimeout:    ServerReadTimeout,
 		WriteTimeout:   ServerWriteTimeout,
 		IdleTimeout:    ServerIdleTimeout,
 		MaxHeaderBytes: MaxHeaderBytes,
 	}
-	return &NodeNetworkAPI{
+
+	return &LoadBalancerAPI{
 		cfg:    cfg,
 		server: server,
 	}
 }
 
 // Start starts the HTTP API server in a BLOCKING manner
-func (n *NodeNetworkAPI) Start() error {
+func (n *LoadBalancerAPI) Start() error {
 	err := n.server.ListenAndServe()
 	if errors.Is(err, http.ErrServerClosed) {
 		n.cfg.Logger.Infof("HTTP API server stopped successfully")
@@ -57,24 +58,19 @@ func (n *NodeNetworkAPI) Start() error {
 }
 
 // Stop stops the HTTP API server
-func (n *NodeNetworkAPI) Stop() error {
+func (n *LoadBalancerAPI) Stop() error {
 	ctx, cancel := context.WithTimeout(context.Background(), ServerShutdownTimeout)
 	defer cancel()
 
 	return n.server.Shutdown(ctx)
 }
 
-func setupRouter(dispatcher *nodeNet.Dispatcher) *gin.Engine {
-	// todo(): replace with gin.New()
-	router := gin.Default()
-	handlr := newHandler(dispatcher)
+func setupRouter(registry *registry.NodeRegistry) *gin.Engine {
+	router := gin.Default() // todo(): replace with gin.New()
+	handlr := newHandler(registry)
 
-	// GET requests
-	router.GET("/status", handlr.GetStatus)
-
-	// POST requests
-	router.POST("/start", handlr.PostStart)
-	router.POST("/stop", handlr.PostStop)
+	router.GET("/nodes", handlr.GetNodesStatus)
+	router.GET("/nodes/:id", handlr.GetNode)
 
 	return router
 }

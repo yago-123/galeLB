@@ -15,6 +15,13 @@ const (
 	HealthCheckIntervalDivisor = 2
 )
 
+type Status string
+
+const (
+	StatusRunning Status = "running"
+	StatusStopped        = "stopped"
+)
+
 type Target struct {
 	IP   string
 	Port int
@@ -29,12 +36,15 @@ func (t *Target) String() string {
 type Dispatcher struct {
 	targets map[string]Target
 
+	status Status
+
 	cfg *nodeConfig.Config
 }
 
 func NewDispatcher(cfg *nodeConfig.Config, targets map[string]Target) *Dispatcher {
 	return &Dispatcher{
 		targets: targets,
+		status:  StatusStopped,
 		cfg:     cfg,
 	}
 }
@@ -100,54 +110,6 @@ func (d *Dispatcher) Stop() {
 
 }
 
-/*
-
-	var err error
-	var wg sync.WaitGroup
-
-	client, err := nodeNet.NewClient(cfg.Logger, address.IP, address.Port)
-		if err != nil {
-			cfg.Logger.Fatalf("failed to create client: %v", err)
-		}
-
-		ctxConfig, cancelConfig := context.WithTimeout(context.Background(), GetConfigTimeout)
-		defer cancelConfig()
-
-		executionCfg, err := client.GetConfig(ctxConfig)
-		if err != nil {
-			cfg.Logger.Fatalf("failed to get config: %v", err)
-		}
-
-		normalizedTime := time.Duration(executionCfg.HealthCheckTimeout) * time.Nanosecond
-		// todo(): change this to a more accurate value
-		healthPeriod := normalizedTime / 2
-
-		// Increase work group to wait for the health status goroutine and spawn health check reporter
-		wg.Add(1)
-		go func() {
-			// Ensure Done is called when the goroutine finishes
-			defer wg.Done()
-
-			// Report health status to the load balancer
-			for {
-				ctx, cancel := context.WithTimeout(context.Background(), normalizedTime)
-				defer cancel()
-
-				if err = client.ReportHealthStatus(ctx, &v1Consensus.HealthStatus{
-					Service: "gale-node",
-					Status:  uint32(v1Consensus.Serving),
-					Message: "Serving requests goes brrrrr",
-				}); err != nil {
-					cfg.Logger.Errorf("failed to report health status: %v", err)
-				}
-
-				cfg.Logger.Debugf("reported health status to %s:%d", address.IP, address.Port)
-
-				<-time.After(healthPeriod)
-			}
-		}()
-	}
-
-	// Wait for all goroutines to finish
-	wg.Wait()
-*/
+func (d *Dispatcher) Status() Status {
+	return StatusRunning
+}

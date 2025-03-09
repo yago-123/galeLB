@@ -40,7 +40,12 @@ func main() {
 	// Create API for querying the node
 	nodeAPI := nodeAPIV1.New(cfg, dispatcher)
 
-	nodeAPI.Start()
+	go func() {
+		errAPI := nodeAPI.Start()
+		if errAPI != nil {
+			cfg.Logger.Errorf("failed to start node API: %v", errAPI)
+		}
+	}()
 	defer nodeAPI.Stop()
 
 	dispatcher.Start()
