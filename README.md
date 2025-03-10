@@ -128,7 +128,7 @@ $ ansible-playbook -i ansible/e2e-hosts.ini \
 ```
 
 ## Running the e2e tests
-Run the e2e tests:
+Run the e2e tests sequentially:
 ```bash
 $ sudo go test ./e2e -parallel 1
 ```

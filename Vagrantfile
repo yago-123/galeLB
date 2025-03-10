@@ -25,15 +25,33 @@ Vagrant.configure("2") do |config|
         vb.cpus = 2
       end
 
-      # Provisioning: Install Avahi for mDNS
+      # Provisioning: Install Avahi, netcat, and run the small_server.sh script
       vm.vm.provision "shell", inline: <<-SHELL
         sudo apt update
-        sudo apt install -y avahi-daemon
+        sudo apt install -y avahi-daemon netcat-traditional
+
+        # Enable and start avahi-daemon
         sudo systemctl enable --now avahi-daemon
 
         # Add SSH public key login for vagrant user
         sudo mkdir -p /home/vagrant/.ssh
         echo "#{public_key}" | sudo tee -a /home/vagrant/.ssh/authorized_keys > /dev/null
+      SHELL
+
+      # Use Vagrant's file provisioner to copy the small_server.sh file to the VM
+      vm.vm.provision "file", source: "e2e/small_server.py", destination: "/home/vagrant/small_server.py"
+      vm.vm.provision "file", source: "e2e/small_server.service", destination: "/home/vagrant/small_server.service"
+
+      # Run the small_server.sh script
+      vm.vm.provision "shell", inline: <<-SHELL
+        sudo chmod +x /home/vagrant/small_server.py
+        sudo mkdir -p /var/log/small_server
+
+        sudo mv /home/vagrant/small_server.service /etc/systemd/system/small_server.service
+
+        sudo systemctl daemon-reload
+        sudo systemctl enable small_server
+        sudo systemctl restart small_server
       SHELL
     end
   end

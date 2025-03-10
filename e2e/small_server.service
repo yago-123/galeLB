@@ -1,0 +1,15 @@
+[Unit]
+Description=Small Server Script
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 /home/vagrant/small_server.py
+Restart=always
+User=vagrant
+StandardOutput=file:/var/log/small_server/output.log
+StandardError=file:/var/log/small_server/error.log
+SyslogIdentifier=small_server
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
