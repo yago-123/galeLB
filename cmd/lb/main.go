@@ -37,12 +37,15 @@ func main() {
 
 	// Start the load balancer API
 	go func() {
-		errAPI := lbAPI.Start()
-		if errAPI != nil {
+		if errAPI := lbAPI.Start(); errAPI != nil {
 			cfg.Logger.Errorf("failed to start load balancer API: %v", errAPI)
 		}
 	}()
-	defer lbAPI.Stop()
+	defer func() {
+		if errAPI := lbAPI.Stop(); errAPI != nil {
+			cfg.Logger.Errorf("failed to stop load balancer API: %v", errAPI)
+		}
+	}()
 
 	// Add some nodes
 	// router.AddNode(common.AddrKey{}, "192.168.1.2", 9091)

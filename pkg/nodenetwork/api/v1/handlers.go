@@ -37,7 +37,7 @@ func (h *handler) GetStatus(c *gin.Context) {
 // @Success 200
 // @Router /start [post]
 func (h *handler) PostStart(c *gin.Context) {
-	h.dispatcher.Start()
+	_ = h.dispatcher.Start()
 
 	c.Status(http.StatusOK)
 }
@@ -48,7 +48,7 @@ func (h *handler) PostStart(c *gin.Context) {
 // @Success 200
 // @Router /stop [post]
 func (h *handler) PostStop(c *gin.Context) {
-	h.dispatcher.Stop()
+	_ = h.dispatcher.Stop()
 
 	c.Status(http.StatusOK)
 }

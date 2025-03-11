@@ -40,16 +40,28 @@ func main() {
 	// Create API for querying the node
 	nodeAPI := nodeAPIV1.New(cfg, dispatcher)
 
+	// Start the node API
 	go func() {
-		errAPI := nodeAPI.Start()
-		if errAPI != nil {
+		if errAPI := nodeAPI.Start(); errAPI != nil {
 			cfg.Logger.Errorf("failed to start node API: %v", errAPI)
 		}
 	}()
-	defer nodeAPI.Stop()
 
-	dispatcher.Start()
-	defer dispatcher.Stop()
+	defer func() {
+		if errAPI := nodeAPI.Stop(); errAPI != nil {
+			cfg.Logger.Errorf("failed to stop node API: %v", errAPI)
+		}
+	}()
+
+	if errDisp := dispatcher.Start(); errDisp != nil {
+		cfg.Logger.Errorf("failed running dispatcher: %v", errDisp)
+	}
+
+	defer func() {
+		if errDisp := dispatcher.Stop(); errDisp != nil {
+			cfg.Logger.Errorf("failed to stop dispatcher: %v", errDisp)
+		}
+	}()
 
 	// todo(); add some logic for stopping the node in here
 }
