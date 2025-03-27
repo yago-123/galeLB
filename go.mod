@@ -8,7 +8,7 @@ require (
 	github.com/mdlayher/arp v0.0.0-20220512170110-6706a2966875
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.9.1
-	github.com/spf13/viper v1.20.0
+	github.com/spf13/viper v1.20.1
 	golang.org/x/net v0.37.0
 	google.golang.org/grpc v1.71.0
 	google.golang.org/protobuf v1.36.6
