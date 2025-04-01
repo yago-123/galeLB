@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"strings"
 	"sync"
+	"testing"
 
 	"github.com/yago-123/galelb/pkg/util"
 )
@@ -82,18 +84,18 @@ func CheckLBsForwardRequests(ctx context.Context, hosts []string) error {
 // checkRequest sends a request to the provided host and checks if the response body is the expected one based
 // on the function passed as checkFunc
 func checkRequest(ctx context.Context, host string, checkFunc func(string, string) bool) error {
-	endpoint := fmt.Sprintf("http://%s:%d", host, DefaultIncomingClientRequests)
+	endpoint := fmt.Sprintf("http://%s", net.JoinHostPort(host, fmt.Sprintf("%d", DefaultIncomingClientRequests)))
 
 	// Create a new request with the provided context
-	req, err := http.NewRequestWithContext(ctx, "GET", endpoint, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
-		return fmt.Errorf("failed to create request for %s: %v", host, err)
+		return fmt.Errorf("failed to create request for %s: %w", host, err)
 	}
 
 	// Perform the request using the default client
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("failed to send request to %s: %v", host, err)
+		return fmt.Errorf("failed to send request to %s: %w", host, err)
 	}
 	defer resp.Body.Close()
 
@@ -103,7 +105,7 @@ func checkRequest(ctx context.Context, host string, checkFunc func(string, strin
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("failed to read response body from %s: %v", host, err)
+		return fmt.Errorf("failed to read response body from %s: %w", host, err)
 	}
 
 	// Use the passed checkFunc to determine if the response body is valid for the node or LB
@@ -112,4 +114,50 @@ func checkRequest(ctx context.Context, host string, checkFunc func(string, strin
 	}
 
 	return nil
+}
+
+func setupReadyState(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), SetupReadyStateTimeout)
+	defer cancel()
+
+	if err := PingHosts(ctx, allHosts); err != nil {
+		t.Fatal(err)
+	}
+
+	// todo(): set all nodes into ready state
+	// todo(): sleep for a while to allow the nodes to be ready
+	// todo(): check that load balancer reflects correct changes
+}
+
+func verifyReadyState(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), VerifyReadyStateTimeout)
+	defer cancel()
+
+	if err := PingHosts(ctx, allHosts); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := CheckNodesServeRequests(ctx, nodeHosts); err != nil {
+		t.Fatal(err)
+	}
+
+	// if err := CheckLBsForwardRequests(ctx, lbHosts); err != nil {
+	// 	t.Fatal(err)
+	// }
+}
+
+func setupStoppedState(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), SetupStoppedStateTimeout)
+	defer cancel()
+
+	if err := PingHosts(ctx, allHosts); err != nil {
+		t.Fatal(err)
+	}
+	// todo(): set all nodes into stopped state
+	// todo(): sleep for a while to allow the nodes to be stopped
+	// todo(): check that load balancer reflects correct changes
+}
+
+func verifyStoppedState(_ *testing.T) {
+
 }

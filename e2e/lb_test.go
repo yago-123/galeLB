@@ -1,7 +1,6 @@
 package e2e_test
 
 import (
-	"context"
 	"testing"
 	"time"
 )
@@ -29,52 +28,11 @@ var lbHosts = []string{ //nolint:gochecknoglobals // OK to have global test data
 
 var allHosts = append(nodeHosts, lbHosts...) //nolint:gochecknoglobals // OK to have global test data
 
-func setupReadyState(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), SetupReadyStateTimeout)
-	defer cancel()
-
-	if err := PingHosts(ctx, allHosts); err != nil {
-		t.Fatal(err)
-	}
-
-	// todo(): set all nodes into ready state
-	// todo(): sleep for a while to allow the nodes to be ready
-	// todo(): check that load balancer reflects correct changes
-}
-
-func verifyReadyState(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), VerifyReadyStateTimeout)
-	defer cancel()
-
-	if err := PingHosts(ctx, allHosts); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := CheckNodesServeRequests(ctx, nodeHosts); err != nil {
-		t.Fatal(err)
-	}
-
-	// if err := CheckLBsForwardRequests(ctx, lbHosts); err != nil {
-	// 	t.Fatal(err)
-	// }
-}
-
-func setupStoppedState(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), SetupStoppedStateTimeout)
-	defer cancel()
-
-	if err := PingHosts(ctx, allHosts); err != nil {
-		t.Fatal(err)
-	}
-	// todo(): set all nodes into stopped state
-	// todo(): sleep for a while to allow the nodes to be stopped
-	// todo(): check that load balancer reflects correct changes
-}
-
 func TestLoadBalancer_setup(t *testing.T) {
 	setupReadyState(t)
 	verifyReadyState(t)
-
+	setupStoppedState(t)
+	verifyStoppedState(t)
 }
 
 func TestLoadBalancer_testAllInstancesUpAndRunning(_ *testing.T) {
