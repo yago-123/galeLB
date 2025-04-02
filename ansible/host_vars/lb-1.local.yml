@@ -7,9 +7,9 @@ config_file_content: |
   # port opened to listen for incoming connections from other load balancers (synchronization)
   load_balancer_port = 9090
   # interface used to communicate and re-route network packets to nodes
-  net_interface_nodes = "eth1"
+  net_interface_nodes = "ens18"
   # interface used to retrieve and re-route network packets from clients 
-  net_interface_clients = "eth1"
+  net_interface_clients = "ens18"
   
   [node_health]
   # number of continuous health checks that must be passed before being eligible for routing destination

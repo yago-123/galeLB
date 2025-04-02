@@ -122,9 +122,17 @@ This will spawn 3 load balancer instances and 3 node instances. All machines ins
 enable `mDNS` service discovery. Once instances are up, provision the load balancer and the nodes:
 ```bash
 $ ansible-playbook -i ansible/e2e-hosts.ini \
-                      ansible/playbooks/lb.yml
+                      ansible/playbooks/lb.yml -K
 $ ansible-playbook -i ansible/e2e-hosts.ini \
-                      ansible/playbooks/node.yml
+                      ansible/playbooks/node.yml -K
+```
+
+You can also run the playbooks for Proxmox hosts:
+```bash
+$ ansible-playbook -i ansible/proxmox-hosts.ini \
+                      ansible/playbooks/lb.yml -K
+$ ansible-playbook -i ansible/proxmox-hosts.ini \
+                      ansible/playbooks/node.yml -K
 ```
 
 ## Running the e2e tests
