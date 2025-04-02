@@ -26,7 +26,10 @@ func NewClient(logger *logrus.Logger, ip string, port int) (*Client, error) {
 	remoteServer := fmt.Sprintf("%s:%d", ip, port)
 
 	// todo(): we must have an array of remove servers for multi-node load balancer
-	conn, err := grpc.NewClient(remoteServer, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(
+		remoteServer,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("could not connect to load balancer: %w", err)
 	}

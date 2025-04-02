@@ -159,6 +159,7 @@ func (d *Dispatcher) reportHealthLoop(wg *sync.WaitGroup, client *Client, t Targ
 		case <-d.generalCtx.Done():
 			// If the dispatcher is stopped, return
 			return
+		// todo(): handle reconnection to the lb if the connection is lost
 		default:
 			// Otherwise, report health status
 			ctxTimeout, cancel := context.WithTimeout(context.Background(), timeout)

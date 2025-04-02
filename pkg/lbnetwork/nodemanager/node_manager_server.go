@@ -22,8 +22,8 @@ const (
 	MaxSendMsgSize = 4 * 1024 * 1024 // 4MB
 
 	gRPCInfinity            = time.Duration(math.MaxInt64)
-	KeepAliveProbeFrequency = time.Second * 3
-	KeepAliveProbeTimeout   = time.Second * 5
+	KeepAliveProbeFrequency = 10 * time.Second
+	KeepAliveProbeTimeout   = 15 * time.Second
 
 	DefaultL4Protocol = "tcp"
 )

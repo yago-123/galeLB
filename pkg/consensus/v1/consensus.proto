@@ -22,7 +22,7 @@ message HealthStatus {
   string service = 1; // The service origin (e.g., "node", "load_balancer")
   uint32 status = 2;  // The health status (e.g., "SERVING", "NOT_SERVING")
   string message = 3; // Optional message providing more context (e.g., error details)
-  // Report other arguments such as mem, CPU, etc...
+  // Report other arguments such as mem, CPU, etc... to handle balance load 
 }
 
 message ConfigResponse {
