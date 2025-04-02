@@ -119,7 +119,7 @@ func (s *NodeManager) listenerReportHealthStatus(nodeKey string, msgChan chan *v
 			return
 		}
 
-		s.logger.Infof("received health check from node %s with status %d", nodeKey, req.GetStatus())
+		s.logger.Infof("received health check from node %s with status %d", nodeKey, v1Consensus.StatusString(v1Consensus.ServiceStatus(req.GetStatus())))
 
 		if errRecv != nil {
 			errChan <- errRecv

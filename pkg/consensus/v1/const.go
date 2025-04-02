@@ -8,7 +8,7 @@ const (
 	ShuttingDown
 )
 
-func String(s ServiceStatus) string {
+func StatusString(s ServiceStatus) string {
 	switch s {
 	case Serving:
 		return "Serving"
