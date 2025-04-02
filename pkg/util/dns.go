@@ -120,10 +120,8 @@ func constructMDNSQuery(host string) []byte {
 
 // sendAndReceiveMDNS sends an mDNS query and waits for a response
 func sendAndReceiveMDNS(ctx context.Context, conn net.PacketConn, dst *net.UDPAddr, query []byte) ([]net.IP, error) {
-	errChan := make(chan error, 1)
 	respChan := make(chan []net.IP, 1)
-	defer close(errChan)
-	defer close(respChan)
+	errChan := make(chan error, 1)
 
 	// Send query
 	go func() {
@@ -134,17 +132,16 @@ func sendAndReceiveMDNS(ctx context.Context, conn net.PacketConn, dst *net.UDPAd
 	}()
 
 	// Set read timeout
-	err := conn.SetReadDeadline(time.Now().Add(MaxMDNSReadTimeout))
-	if err != nil {
-		return []net.IP{}, err
+	if err := conn.SetReadDeadline(time.Now().Add(MaxMDNSReadTimeout)); err != nil {
+		return nil, err
 	}
 
 	// Listen for response
 	go func() {
 		buffer := make([]byte, DefaultMDNSResponseBuffer)
-		n, _, errReply := conn.ReadFrom(buffer)
-		if errReply != nil {
-			errChan <- errReply
+		n, _, err := conn.ReadFrom(buffer)
+		if err != nil {
+			errChan <- err
 			return
 		}
 		if n < 12+16 {
@@ -155,11 +152,11 @@ func sendAndReceiveMDNS(ctx context.Context, conn net.PacketConn, dst *net.UDPAd
 		respChan <- []net.IP{ip}
 	}()
 
-	// Wait for response, error, or context cancellation
+	// Handle first available response
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
-	case err = <-errChan:
+	case err := <-errChan:
 		return nil, err
 	case ip := <-respChan:
 		return ip, nil
