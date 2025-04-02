@@ -2,6 +2,5 @@ config_file_content: |
   [load_balancer]
   # endpoint that the load balancer will listen for incoming connections. Can define a hostname or an IP address
   addresses = [
-    { hostname = "lb-1.local", port = 7070 },
-    { hostname = "lb-2.local", port = 7070 }
+    { hostname = "lb-0.local", port = 7070 }
   ]
