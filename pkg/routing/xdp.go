@@ -23,16 +23,18 @@ const (
 )
 
 type xdp struct {
-	netInterface string
-	port         int
-	logger       *logrus.Logger
+	pubNetInterface  string
+	privNetInterface string
+	port             int
+	logger           *logrus.Logger
 }
 
-func newXDP(logger *logrus.Logger, netInterface string, incomingReqPort int) *xdp {
+func newXDP(logger *logrus.Logger, pubNetInterface, privNetInterface string, incomingReqPort int) *xdp {
 	return &xdp{
-		netInterface: netInterface,
-		port:         incomingReqPort,
-		logger:       logger,
+		pubNetInterface:  pubNetInterface,
+		privNetInterface: privNetInterface,
+		port:             incomingReqPort,
+		logger:           logger,
 	}
 }
 
@@ -55,28 +57,48 @@ func (r *xdp) loadProgram() error {
 	defer collection.Close()
 
 	// Retrieve program loaded
-	prog, found := collection.Programs[RouterXDPProgName]
+	progDNAT, found := collection.Programs[RouterXDPProgName]
 	if !found {
 		return fmt.Errorf("failed to find XDP collection program: %s", RouterXDPProgName)
 	}
 
-	// Fetch index from string interface
-	idxInterface, err := getInterfaceIndex(r.netInterface)
-	if err != nil {
-		return fmt.Errorf("failed to get interface index: %w", err)
+	progSNAT, found := collection.Programs[RouterXDPProgName]
+	if !found {
+		return fmt.Errorf("failed to find XDP collection program: %s", RouterXDPProgName)
 	}
 
-	// Attach XDP program to a network interface
-	link, err := link.AttachXDP(link.XDPOptions{
-		Program:   prog,
-		Interface: idxInterface,
+	// Fetch index of network card based on public interface name
+	pubIdxInterface, err := getInterfaceIndex(r.pubNetInterface)
+	if err != nil {
+		return fmt.Errorf("failed to get index for public network card: %w", err)
+	}
+
+	privIdxInterface, err := getInterfaceIndex(r.privNetInterface)
+	if err != nil {
+		return fmt.Errorf("failed to get index for private network card: %w", err)
+	}
+
+	// Attach XDP DNAT program to public network interface
+	linkDNAT, err := link.AttachXDP(link.XDPOptions{
+		Program:   progDNAT,
+		Interface: pubIdxInterface,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to attach XDP program: %w", err)
+		return fmt.Errorf("failed to attach XDP link: %w", err)
 	}
-	defer link.Close()
+	defer linkDNAT.Close()
 
-	r.logger.Debugf("XDP program loaded and attached to interface %s (index = %d)", r.netInterface, idxInterface)
+	// Attach XDP SNAT program to private network interface
+	linkSNAT, err := link.AttachXDP(link.XDPOptions{
+		Program:   progSNAT,
+		Interface: privIdxInterface,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to attach XDP link: %w", err)
+	}
+	defer linkSNAT.Close()
+
+	r.logger.Debugf("XDP program loaded and attached to interface %s (index = %d)", r.pubNetInterface, pubIdxInterface)
 
 	return nil
 }

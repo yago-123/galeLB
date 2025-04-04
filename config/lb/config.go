@@ -13,8 +13,8 @@ import (
 const (
 	KeyLocalNodePort                 = "local.node_port"
 	KeyLocalClientsPort              = "local.clients_port"
-	KeyLocalNetIfaceNodes            = "local.net_interface_nodes"
-	KeyLocalNetIfaceClients          = "local.net_interface_clients"
+	KeyLocalNetIfacePrivate          = "local.net_interface_private"
+	KeyLocalNetIfacePublic           = "local.net_interface_public"
 	KeyNodeHealthChecksBeforeRouting = "node_health.checks_before_routing"
 	KeyNodeHealthChecksTimeout       = "node_health.checks_timeout"
 	KeyNodeHealthBlackListAfterFails = "node_health.black_list_after_fails"
@@ -47,11 +47,11 @@ type Local struct {
 	NodePort int `mapstructure:"node_port"`
 	// ClientsPort is the port that will receive and forward client requests to the nodes
 	ClientsPort int `mapstructure:"clients_port"`
-	// NetIfaceNodes is the network interface that will be used to retrieve and route packets to nodes
-	NetIfaceNodes string `mapstructure:"net_interface_nodes"`
-	// NetIfaceClients is the network interface that will be used to retrieve and route client packets. This variable
+	// NetIfacePrivate is the network interface that will be used to retrieve and route packets to nodes
+	NetIfacePrivate string `mapstructure:"net_interface_private"`
+	// NetIfacePublic is the network interface that will be used to retrieve and route client packets. This variable
 	// is required to be set in order to load the XDP program
-	NetIfaceClients string `mapstructure:"net_interface_clients"`
+	NetIfacePublic string `mapstructure:"net_interface_public"`
 }
 
 type NodeHealth struct {
@@ -73,8 +73,8 @@ func New() *Config {
 		Local: Local{
 			NodePort:        DefaultLocalNodePort,
 			ClientsPort:     DefaultLocalClientsPort,
-			NetIfaceNodes:   DefaultLocalNetIfaceNodes,
-			NetIfaceClients: DefaultLocalNetIfaceClients,
+			NetIfacePrivate: DefaultLocalNetIfaceNodes,
+			NetIfacePublic:  DefaultLocalNetIfaceClients,
 		},
 		NodeHealth: NodeHealth{
 			ChecksBeforeRouting: DefaultNodeHealthChecksBeforeRouting,
@@ -107,8 +107,8 @@ func InitConfig(cmd *cobra.Command) *Config {
 func AddConfigFlags(cmd *cobra.Command) {
 	cmd.Flags().Int(KeyLocalNodePort, DefaultLocalNodePort, "Port that will be used by nodes to communicate with LB")
 	cmd.Flags().Int(KeyLocalClientsPort, DefaultLocalClientsPort, "Port that will receive and forward client requests to the nodes")
-	cmd.Flags().String(KeyLocalNetIfaceNodes, DefaultLocalNetIfaceNodes, "Network interface that will be used to retrieve and route packets to nodes")
-	cmd.Flags().String(KeyLocalNetIfaceClients, DefaultLocalNetIfaceClients, "Network interface that will be used to retrieve and route client packets")
+	cmd.Flags().String(KeyLocalNetIfacePrivate, DefaultLocalNetIfaceNodes, "Network interface that will be used to retrieve and route packets to nodes")
+	cmd.Flags().String(KeyLocalNetIfacePublic, DefaultLocalNetIfaceClients, "Network interface that will be used to retrieve and route client packets")
 	cmd.Flags().Uint(KeyNodeHealthChecksBeforeRouting, DefaultNodeHealthChecksBeforeRouting, "Continuous node health checks that must be received before starting routing traffic to the node")
 	cmd.Flags().Duration(KeyNodeHealthChecksTimeout, DefaultNodeHealthChecksTimeout, "Maximum time between health checks before node is considered unresponsive and traffic is re-routed")
 	cmd.Flags().Int(KeyNodeHealthBlackListAfterFails, DefaultNodeHealthBlackListAfterFails, "Number of times node can be added and disabled from routing table before is ignored by load balancer")
@@ -117,8 +117,8 @@ func AddConfigFlags(cmd *cobra.Command) {
 
 	_ = viper.BindPFlag(KeyLocalNodePort, cmd.Flags().Lookup(KeyLocalNodePort))
 	_ = viper.BindPFlag(KeyLocalClientsPort, cmd.Flags().Lookup(KeyLocalClientsPort))
-	_ = viper.BindPFlag(KeyLocalNetIfaceNodes, cmd.Flags().Lookup(KeyLocalNetIfaceNodes))
-	_ = viper.BindPFlag(KeyLocalNetIfaceClients, cmd.Flags().Lookup(KeyLocalNetIfaceClients))
+	_ = viper.BindPFlag(KeyLocalNetIfacePrivate, cmd.Flags().Lookup(KeyLocalNetIfacePrivate))
+	_ = viper.BindPFlag(KeyLocalNetIfacePublic, cmd.Flags().Lookup(KeyLocalNetIfacePublic))
 	_ = viper.BindPFlag(KeyNodeHealthChecksBeforeRouting, cmd.Flags().Lookup(KeyNodeHealthChecksBeforeRouting))
 	_ = viper.BindPFlag(KeyNodeHealthChecksTimeout, cmd.Flags().Lookup(KeyNodeHealthChecksTimeout))
 	_ = viper.BindPFlag(KeyNodeHealthBlackListAfterFails, cmd.Flags().Lookup(KeyNodeHealthBlackListAfterFails))
@@ -133,11 +133,11 @@ func ApplyFlagsToConfig(cmd *cobra.Command, cfg *Config) {
 	if cmd.Flags().Changed(KeyLocalClientsPort) {
 		cfg.Local.ClientsPort = viper.GetInt(KeyLocalClientsPort)
 	}
-	if cmd.Flags().Changed(KeyLocalNetIfaceNodes) {
-		cfg.Local.NetIfaceNodes = viper.GetString(KeyLocalNetIfaceNodes)
+	if cmd.Flags().Changed(KeyLocalNetIfacePrivate) {
+		cfg.Local.NetIfacePrivate = viper.GetString(KeyLocalNetIfacePrivate)
 	}
-	if cmd.Flags().Changed(KeyLocalNetIfaceClients) {
-		cfg.Local.NetIfaceClients = viper.GetString(KeyLocalNetIfaceClients)
+	if cmd.Flags().Changed(KeyLocalNetIfacePublic) {
+		cfg.Local.NetIfacePublic = viper.GetString(KeyLocalNetIfacePublic)
 	}
 	if cmd.Flags().Changed(KeyNodeHealthChecksBeforeRouting) {
 		cfg.NodeHealth.ChecksBeforeRouting = viper.GetUint(KeyNodeHealthChecksBeforeRouting)

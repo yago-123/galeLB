@@ -63,6 +63,7 @@ int dnat_prog(struct __sk_buff *skb) {
     return TC_ACT_OK;
 }
 
+/*
 SEC("tc_egress")  // Attach this to eth1 (forwarding to backend)
 int snat_prog(struct __sk_buff *skb) {
     void *data = (void *)(long)skb->data;
@@ -98,4 +99,5 @@ int snat_prog(struct __sk_buff *skb) {
     return TC_ACT_OK;
 }
 
+*/
 char _license[] SEC("license") = "GPL";
