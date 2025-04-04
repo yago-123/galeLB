@@ -8,19 +8,15 @@ Supports:
 - [ ] L3-Based Forwarding (Stateless IP Routing in `XDP`)
 - [ ] L4-Based Forwarding (Stateful `NAT` with Connection Tracking in `XDP + TC`)]
 
-## Requirements 
-System requirements: 
+## Architecture
+![Alt text](https://github.com/user-attachments/assets/10aa54c8-f2f2-4b0c-bfed-13bfa72497d0)
+
+## Requirements
+System requirements:
 * Linux Kernel 4.4+
 * Clang 18+
 * LLVM 18+
 * 64 bit architecture and x86 CPU
-
-Network: 
-* Make sure that ARP is enabled on the network interface that communicates the load balancer with the nodes.
-
-## Architecture
-![Alt text](https://github.com/user-attachments/assets/10aa54c8-f2f2-4b0c-bfed-13bfa72497d0)
-
 
 ## Configuration
 Load balancer configuration:
