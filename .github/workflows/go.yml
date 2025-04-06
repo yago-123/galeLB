@@ -30,6 +30,9 @@ jobs:
       - name: Generate protobuf files
         run: make protobuf
 
+      - name: Install linux headers
+        run: sudo apt-get install linux-headers-$(uname -r)
+
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v2
         with:

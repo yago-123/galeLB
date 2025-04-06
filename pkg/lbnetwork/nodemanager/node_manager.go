@@ -66,7 +66,7 @@ func (s *NodeManager) GetConfig(_ context.Context, _ *emptypb.Empty) (*v1Consens
 
 // ReportHealthStatus is the main loop for listening to health checks from nodes. Nodes send health checks periodically to the
 // LB to indicate their presence. If a node does not send a health check within a certain timeout, it is removed.
-func (s *NodeManager) ReportHealthStatus(stream grpc.BidiStreamingServer[v1Consensus.HealthStatus, v1Consensus.HealthStatus]) error {
+func (s *NodeManager) ReportHealthStatus(stream v1Consensus.LBNodeManager_ReportHealthStatusServer) error {
 	msgChan := make(chan *v1Consensus.HealthStatus, ChannelBufferSize)
 	errChan := make(chan error, ChannelBufferSize)
 

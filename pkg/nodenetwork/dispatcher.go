@@ -2,7 +2,9 @@ package nodenetwork
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"sync"
 	"time"
 
@@ -163,13 +165,19 @@ func (d *Dispatcher) reportHealthLoop(wg *sync.WaitGroup, client *Client, t Targ
 		default:
 			// Otherwise, report health status
 			ctxTimeout, cancel := context.WithTimeout(context.Background(), timeout)
-			if err := client.ReportHealthStatus(ctxTimeout, &v1Consensus.HealthStatus{
+			err := client.ReportHealthStatus(ctxTimeout, &v1Consensus.HealthStatus{
 				Service: "gale-node",
 				Status:  uint32(v1Consensus.Serving),
 				Message: "Serving requests goes brrrrr",
-			}); err != nil {
+			})
+
+			if errors.Is(err, io.EOF) {
+				// todo(): handle reconnection to the lb if the connection is lost
+				d.cfg.Logger.Errorf("disconnected from %s:%d: %v", t.IP, t.Port, err)
+			} else if err != nil {
 				d.cfg.Logger.Errorf("failed to report health status: %v", err)
 			}
+
 			cancel()
 
 			d.cfg.Logger.Debugf("reported health status to %s:%d", t.IP, t.Port)

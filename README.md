@@ -9,7 +9,7 @@ Supports:
 - [ ] L4-Based Forwarding (Stateful `NAT` with Connection Tracking in `XDP + TC`)]
 
 ## Architecture
-![Alt text](https://github.com/user-attachments/assets/10aa54c8-f2f2-4b0c-bfed-13bfa72497d0)
+![Alt text](https://github.com/user-attachments/assets/bdca33a4-c6c6-4564-9ba7-9c61f6a5af71)
 
 ## Requirements
 System requirements:
