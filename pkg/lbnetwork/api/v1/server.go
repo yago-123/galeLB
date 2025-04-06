@@ -3,8 +3,11 @@ package v1
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
+
+	"github.com/yago-123/galelb/pkg/util"
 
 	"github.com/gin-gonic/gin"
 	"github.com/yago-123/galelb/config/lb"
@@ -27,8 +30,13 @@ type LoadBalancerAPI struct {
 }
 
 func New(cfg *lb.Config, registry *registry.NodeRegistry) *LoadBalancerAPI {
+	ip, err := util.GetIPv4FromInterface(cfg.PrivateInterface.NetIfacePrivate)
+	if err != nil {
+		cfg.Logger.Fatalf("failed to get IPv4 address from interface %s: %v", cfg.PrivateInterface.NetIfacePrivate, err)
+	}
+
 	server := &http.Server{
-		Addr:           ":5555", // todo(): replace with cfg
+		Addr:           fmt.Sprintf("%s:%d", ip, cfg.PrivateInterface.APIPort), // todo(): replace with cfg
 		Handler:        setupRouter(registry),
 		ReadTimeout:    ServerReadTimeout,
 		WriteTimeout:   ServerWriteTimeout,

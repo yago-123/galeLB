@@ -80,11 +80,11 @@ func (s *NodeManager) ReportHealthStatus(stream v1Consensus.LBNodeManager_Report
 	}
 
 	// Try to retrieve the MAC address from the ARP cache. If it fails, try to get it via an ARP call
-	mac, err := util.GetMACFromARPCache(tcpAddr.IP.String(), s.cfg.Local.NetIfacePrivate)
+	mac, err := util.GetMACFromARPCache(tcpAddr.IP.String(), s.cfg.PrivateInterface.NetIfacePrivate)
 	if err != nil {
 		s.logger.Warnf("failed to get MAC address from ARP cache: %v", err)
 
-		mac, err = util.GetMACViaARPCall(tcpAddr.IP.String(), s.cfg.Local.NetIfacePrivate)
+		mac, err = util.GetMACViaARPCall(tcpAddr.IP.String(), s.cfg.PrivateInterface.NetIfacePrivate)
 		if err != nil {
 			s.logger.Errorf("failed to get MAC address via ARP call: %v", err)
 			return fmt.Errorf("failed to get MAC address via ARP call: %w", err)

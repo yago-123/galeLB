@@ -1,14 +1,18 @@
-[local]
-# port opened to listen for incoming connections from nodes
+[private_interface] # todo(): move this to a WireGuard interface
+# port opened to listen for incoming connections from nodes in the private interface
 node_port = 7070
-# port opened to listen for incoming connections from clients
-clients_port = 8080
+# API port opened to listen for incoming orders in the private interface
+api_port  = 5555
 # port opened to listen for incoming connections from other load balancers (synchronization)
 load_balancer_port = 9090
 # interface used to communicate and re-route network packets to nodes
-net_interface_private = "wlo1"
-# interface used to retrieve and re-route network packets from clients 
-net_interface_public = "wlo1"
+net_interface_private = "eth0"
+
+[public_interface]
+# port opened to listen for incoming connections from clients in the public interface
+clients_port = 8080
+# interface used to retrieve and re-route network packets from clients
+net_interface_public = "eth1"
 
 [node_health]
 # number of continuous health checks that must be passed before being eligible for routing destination

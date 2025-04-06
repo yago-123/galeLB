@@ -7,6 +7,8 @@ import (
 	"net"
 	"time"
 
+	"github.com/yago-123/galelb/pkg/util"
+
 	"github.com/yago-123/galelb/pkg/registry"
 
 	lbConfig "github.com/yago-123/galelb/config/lb"
@@ -62,7 +64,12 @@ func New(cfg *lbConfig.Config, registry *registry.NodeRegistry) *Server {
 }
 
 func (s *Server) Start() {
-	listener, err := net.Listen(DefaultL4Protocol, fmt.Sprintf(":%d", s.cfg.Local.NodePort))
+	ip, err := util.GetIPv4FromInterface(s.cfg.PrivateInterface.NetIfacePrivate)
+	if err != nil {
+		log.Fatalf("Failed to get IPv4 from docker network interface: %v", err)
+	}
+
+	listener, err := net.Listen(DefaultL4Protocol, fmt.Sprintf("%s:%d", ip, s.cfg.PrivateInterface.NodePort))
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
 	}
