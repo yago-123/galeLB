@@ -18,7 +18,7 @@ func New(cfg *lbConfig.Config, numVirtualNodes int) (*Router, error) {
 		return nil, fmt.Errorf("number of virtual nodes cannot be less than 1")
 	}
 
-	routerProg := newXDP(cfg.Logger, cfg.Local.NetIfacePublic, cfg.Local.ClientsPort)
+	routerProg := newXDP(cfg.Logger, cfg.Local.NetIfacePublic, cfg.Local.NetIfacePrivate, cfg.Local.ClientsPort)
 	if err := routerProg.loadProgram(); err != nil {
 		return nil, fmt.Errorf("failed to load XDP program: %w", err)
 	}

@@ -9,7 +9,7 @@ config_file_content: |
   # interface used to communicate and re-route network packets to nodes
   net_interface_private = "ens18"
   # interface used to retrieve and re-route network packets from clients 
-  net_interface_public = "ens18"
+  net_interface_public = "ens19"
   
   [node_health]
   # number of continuous health checks that must be passed before being eligible for routing destination

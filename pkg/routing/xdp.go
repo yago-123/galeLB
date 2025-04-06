@@ -19,7 +19,8 @@ var xdpProg []byte
 
 const (
 	RouterXDPProgPath = "pkg/routing/xdp_obj/xdp_router.o"
-	RouterXDPProgName = "xdp_router"
+	DNATXDPProgName   = "dnat_prog"
+	SNATXDPProgName   = "snat_prog"
 )
 
 type xdp struct {
@@ -56,15 +57,15 @@ func (r *xdp) loadProgram() error {
 	}
 	defer collection.Close()
 
-	// Retrieve program loaded
-	progDNAT, found := collection.Programs[RouterXDPProgName]
+	// Retrieve DNAT as SNAT programs from the collection
+	progDNAT, found := collection.Programs[DNATXDPProgName]
 	if !found {
-		return fmt.Errorf("failed to find XDP collection program: %s", RouterXDPProgName)
+		return fmt.Errorf("failed to find XDP collection program: %s", DNATXDPProgName)
 	}
 
-	progSNAT, found := collection.Programs[RouterXDPProgName]
+	progSNAT, found := collection.Programs[SNATXDPProgName]
 	if !found {
-		return fmt.Errorf("failed to find XDP collection program: %s", RouterXDPProgName)
+		return fmt.Errorf("failed to find XDP collection program: %s", SNATXDPProgName)
 	}
 
 	// Fetch index of network card based on public interface name
