@@ -1,9 +1,10 @@
 module github.com/yago-123/galelb
 
 go 1.24.0
+
 require (
 	github.com/cilium/ebpf v0.18.0
-	github.com/gin-gonic/gin v1.10.0
+	github.com/gin-gonic/gin v1.10.1
 	github.com/mdlayher/arp v0.0.0-20220512170110-6706a2966875
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.9.1
