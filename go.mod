@@ -1,6 +1,7 @@
 module github.com/yago-123/galelb
 
 go 1.24.0
+
 require (
 	github.com/cilium/ebpf v0.18.0
 	github.com/gin-gonic/gin v1.10.0
@@ -10,7 +11,7 @@ require (
 	github.com/spf13/viper v1.20.1
 	golang.org/x/net v0.38.0
 	google.golang.org/grpc v1.71.1
-	google.golang.org/protobuf v1.36.6
+	google.golang.org/protobuf v1.36.9
 )
 
 require (
